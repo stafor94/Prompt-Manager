@@ -1,0 +1,65 @@
+html,
+body {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+body,
+.app-shell,
+main,
+.screen,
+.prompt-list {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.app-shell,
+main,
+.screen,
+.prompt-list {
+  width: 100%;
+  overflow-x: hidden;
+}
+
+.prompt-card {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  inline-size: 100%;
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  overflow: hidden;
+  white-space: normal;
+}
+
+.prompt-card > *,
+.prompt-card-header,
+.prompt-card h3,
+.prompt-preview,
+.prompt-meta {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.prompt-card-header {
+  width: 100%;
+  overflow: hidden;
+}
+
+.prompt-card h3 {
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.prompt-preview,
+.prompt-meta {
+  width: 100%;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
