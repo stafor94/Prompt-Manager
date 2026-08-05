@@ -84,21 +84,25 @@ main,
 }
 
 .llm-badge[data-llm="CHATGPT"]::before {
+  content: "";
   -webkit-mask-image: url("./icons/llm-chatgpt.svg");
   mask-image: url("./icons/llm-chatgpt.svg");
 }
 
 .llm-badge[data-llm="GEMINI"]::before {
+  content: "";
   -webkit-mask-image: url("./icons/llm-gemini.svg");
   mask-image: url("./icons/llm-gemini.svg");
 }
 
 .llm-badge[data-llm="GROK"]::before {
+  content: "";
   -webkit-mask-image: url("./icons/llm-grok.svg");
   mask-image: url("./icons/llm-grok.svg");
 }
 
 .llm-badge[data-llm="CLAUDE"]::before {
+  content: "";
   -webkit-mask-image: url("./icons/llm-claude.svg");
   mask-image: url("./icons/llm-claude.svg");
 }
