@@ -1,23 +1,57 @@
-.archive-toolbar {
-  display: flex;
-  flex: 0 0 auto;
-  align-items: center;
-  justify-content: flex-end;
-  flex-wrap: wrap;
-  gap: 8px;
+#archiveScreen .archive-screen-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: 12px;
+  width: 100%;
+  margin-bottom: 14px;
 }
 
-.archive-mode-controls {
-  display: inline-flex;
+#archiveScreen .archive-screen-heading > div:first-child {
+  width: 100%;
+  min-width: 0;
+}
+
+#archiveHeading {
+  margin: 0 0 3px;
+  white-space: nowrap;
+  word-break: keep-all;
+  overflow-wrap: normal;
+}
+
+#archiveImageCount {
+  max-width: 100%;
+  white-space: normal;
+  word-break: keep-all;
+  overflow-wrap: normal;
+}
+
+.archive-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr);
+  align-items: stretch;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+}
+
+.archive-mode-controls,
+.archive-view-controls {
+  display: flex;
+  width: 100%;
+  min-width: 0;
   gap: 4px;
   padding: 4px;
   border-radius: 14px;
   background: var(--surface-container);
 }
 
-.archive-mode-button {
-  min-height: 42px;
-  padding: 0 12px;
+.archive-mode-button,
+.archive-view-button {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0 6px;
   border: 0;
   border-radius: 10px;
   color: var(--on-surface-variant);
@@ -25,13 +59,21 @@
   cursor: pointer;
   font-size: .78rem;
   font-weight: 800;
+  line-height: 1.2;
   white-space: nowrap;
 }
 
 .archive-mode-button.active,
-.archive-mode-button[aria-pressed="true"] {
+.archive-mode-button[aria-pressed="true"],
+.archive-view-button.active,
+.archive-view-button[aria-pressed="true"] {
   color: var(--on-primary-container);
   background: var(--primary-container);
+}
+
+#archiveScreen .image-archive-grid {
+  align-content: start;
+  margin-top: 0;
 }
 
 .image-archive-grid[data-mode="GROUPED"] {
@@ -98,35 +140,19 @@
   background: var(--surface);
 }
 
-@media (max-width: 620px) {
-  .archive-screen-heading {
-    align-items: flex-start;
-  }
-
+@media (max-width: 380px) {
   .archive-toolbar {
-    width: 100%;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
 @media (max-width: 520px) {
-  .archive-screen-heading {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
+  #archiveScreen {
+    padding-top: 8px;
   }
 
-  .archive-toolbar {
-    justify-content: space-between;
-  }
-
-  .archive-mode-controls,
-  .archive-view-controls {
-    flex: 1 1 auto;
-  }
-
-  .archive-mode-button,
-  .archive-view-button {
-    flex: 1 1 0;
-    min-width: 0;
+  #archiveScreen .archive-screen-heading {
+    margin-top: 8px;
   }
 
   .archive-prompt-group {
