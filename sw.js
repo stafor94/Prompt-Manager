@@ -1,4 +1,4 @@
-const CACHE_NAME = "prompt-manager-shell-v5";
+const CACHE_NAME = "prompt-manager-shell-v6";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -8,7 +8,11 @@ const APP_SHELL = [
   "./navigation.js",
   "./manifest.webmanifest",
   "./icons/icon.svg",
-  "./icons/icon-maskable.svg"
+  "./icons/icon-maskable.svg",
+  "./icons/llm-chatgpt.svg",
+  "./icons/llm-gemini.svg",
+  "./icons/llm-grok.svg",
+  "./icons/llm-claude.svg"
 ];
 
 self.addEventListener("install", (event) => {
