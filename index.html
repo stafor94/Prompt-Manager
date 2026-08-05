@@ -1,1 +1,243 @@
-probe
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#6750a4">
+  <meta name="description" content="ChatGPT, Gemini, Grok 프롬프트를 기기 안에 저장하고 관리하는 오프라인 PWA">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="프롬프트 보관함">
+  <title>프롬프트 보관함</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="top-app-bar">
+      <div>
+        <p class="eyebrow">Prompt Vault</p>
+        <h1>프롬프트 보관함</h1>
+      </div>
+      <button id="installButton" class="icon-button hidden" type="button" aria-label="앱 설치" title="앱 설치">↓</button>
+    </header>
+
+    <nav class="navigation" aria-label="주요 화면">
+      <button class="nav-item active" type="button" data-route="library" aria-current="page">보관함</button>
+      <button class="nav-item" type="button" data-route="transform">LLM 변환</button>
+      <button class="nav-item" type="button" data-route="settings">설정</button>
+    </nav>
+
+    <main>
+      <section id="libraryScreen" class="screen active" aria-labelledby="libraryHeading">
+        <div class="screen-heading">
+          <div>
+            <h2 id="libraryHeading">내 프롬프트</h2>
+            <p id="promptCount" class="supporting-text">0개</p>
+          </div>
+          <button id="addPromptButton" class="filled-button" type="button">새 프롬프트</button>
+        </div>
+
+        <div class="search-box">
+          <label for="searchInput">제목 또는 본문 검색</label>
+          <input id="searchInput" type="search" autocomplete="off" placeholder="검색어 입력">
+        </div>
+
+        <div class="filter-grid" aria-label="목록 필터와 정렬">
+          <label>
+            <span>LLM</span>
+            <select id="llmFilter">
+              <option value="ALL">전체</option>
+              <option value="CHATGPT">ChatGPT</option>
+              <option value="GEMINI">Gemini</option>
+              <option value="GROK">Grok</option>
+            </select>
+          </label>
+          <label>
+            <span>정렬</span>
+            <select id="sortOrder">
+              <option value="UPDATED_DESC">최근 수정순</option>
+              <option value="CREATED_DESC">최근 생성순</option>
+              <option value="TITLE_ASC">제목순</option>
+            </select>
+          </label>
+          <label class="checkbox-field">
+            <input id="favoritesOnly" type="checkbox">
+            <span>즐겨찾기만</span>
+          </label>
+        </div>
+
+        <div id="promptList" class="prompt-list" aria-live="polite"></div>
+        <div id="emptyState" class="empty-state hidden">
+          <strong>표시할 프롬프트가 없습니다.</strong>
+          <p>새 프롬프트를 추가하거나 검색 조건을 변경하세요.</p>
+        </div>
+      </section>
+
+      <section id="transformScreen" class="screen" aria-labelledby="transformHeading">
+        <div class="screen-heading">
+          <div>
+            <h2 id="transformHeading">LLM 프롬프트 변환</h2>
+            <p class="supporting-text">외부 API 없이 원문을 보존하는 규칙 기반 변환입니다.</p>
+          </div>
+        </div>
+
+        <div class="card form-card">
+          <div class="two-column">
+            <label>
+              <span>원본 LLM</span>
+              <select id="transformSource">
+                <option value="CHATGPT">ChatGPT</option>
+                <option value="GEMINI">Gemini</option>
+                <option value="GROK">Grok</option>
+              </select>
+            </label>
+            <label>
+              <span>대상 LLM</span>
+              <select id="transformTarget">
+                <option value="GEMINI">Gemini</option>
+                <option value="CHATGPT">ChatGPT</option>
+                <option value="GROK">Grok</option>
+              </select>
+            </label>
+          </div>
+          <label>
+            <span>원문</span>
+            <textarea id="transformInput" rows="10" placeholder="변환할 프롬프트를 입력하세요."></textarea>
+          </label>
+          <button id="transformButton" class="filled-button" type="button">변환하기</button>
+          <label>
+            <span>변환 결과</span>
+            <textarea id="transformOutput" rows="14" placeholder="변환 결과가 여기에 표시됩니다."></textarea>
+          </label>
+          <div class="button-row">
+            <button id="copyTransformButton" class="outlined-button" type="button">결과 복사</button>
+            <button id="saveTransformButton" class="filled-button" type="button">새 프롬프트로 저장</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="settingsScreen" class="screen" aria-labelledby="settingsHeading">
+        <div class="screen-heading">
+          <div>
+            <h2 id="settingsHeading">설정</h2>
+            <p class="supporting-text">데이터는 이 브라우저의 IndexedDB에만 저장됩니다.</p>
+          </div>
+        </div>
+
+        <div class="settings-stack">
+          <section class="card" aria-labelledby="themeHeading">
+            <h3 id="themeHeading">테마</h3>
+            <div class="radio-group">
+              <label><input type="radio" name="theme" value="system" checked> 시스템 설정</label>
+              <label><input type="radio" name="theme" value="light"> 라이트</label>
+              <label><input type="radio" name="theme" value="dark"> 다크</label>
+            </div>
+          </section>
+
+          <section class="card" aria-labelledby="backupHeading">
+            <h3 id="backupHeading">백업 및 복원</h3>
+            <p class="supporting-text">브라우저 데이터 삭제에 대비해 JSON 백업 파일을 정기적으로 보관하세요.</p>
+            <div class="button-row wrap">
+              <button id="exportButton" class="outlined-button" type="button">JSON 백업</button>
+              <button id="restoreButton" class="outlined-button" type="button">JSON 복원</button>
+            </div>
+            <label>
+              <span>복원 방식</span>
+              <select id="restoreMode">
+                <option value="DEDUPLICATE">중복 제외 후 추가</option>
+                <option value="APPEND">기존 데이터에 추가</option>
+                <option value="REPLACE">기존 데이터 삭제 후 전체 복원</option>
+              </select>
+            </label>
+            <input id="restoreFileInput" class="visually-hidden" type="file" accept="application/json,.json">
+          </section>
+
+          <section class="card" aria-labelledby="storageHeading">
+            <h3 id="storageHeading">로컬 저장소</h3>
+            <p id="storageSummary" class="supporting-text">저장소 정보를 불러오는 중입니다.</p>
+            <button id="persistStorageButton" class="outlined-button" type="button">저장소 유지 요청</button>
+          </section>
+
+          <section class="card" aria-labelledby="aboutHeading">
+            <h3 id="aboutHeading">앱 정보</h3>
+            <dl class="info-list">
+              <div><dt>버전</dt><dd>0.1.0</dd></div>
+              <div><dt>네트워크 전송</dt><dd>없음</dd></div>
+              <div><dt>데이터 위치</dt><dd>현재 기기 브라우저</dd></div>
+            </dl>
+          </section>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <dialog id="editorDialog" class="dialog">
+    <form id="promptForm" method="dialog">
+      <div class="dialog-header">
+        <div>
+          <p class="eyebrow">Prompt Editor</p>
+          <h2 id="editorTitle">새 프롬프트</h2>
+        </div>
+        <button id="closeEditorButton" class="icon-button" type="button" aria-label="편집 닫기">×</button>
+      </div>
+      <div class="dialog-content form-card">
+        <label>
+          <span>LLM 종류</span>
+          <select id="promptLlm" required>
+            <option value="CHATGPT">ChatGPT</option>
+            <option value="GEMINI">Gemini</option>
+            <option value="GROK">Grok</option>
+          </select>
+        </label>
+        <label>
+          <span>제목</span>
+          <input id="promptTitleInput" type="text" autocomplete="off" required>
+          <small id="titleCount">0 / 권장 200자</small>
+        </label>
+        <label>
+          <span>본문</span>
+          <textarea id="promptContentInput" rows="14" required></textarea>
+        </label>
+        <label class="checkbox-field">
+          <input id="promptFavoriteInput" type="checkbox">
+          <span>즐겨찾기</span>
+        </label>
+      </div>
+      <div class="dialog-actions">
+        <button id="cancelEditorButton" class="text-button" type="button">취소</button>
+        <button class="filled-button" type="submit">저장</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="detailDialog" class="dialog">
+    <article>
+      <div class="dialog-header">
+        <div>
+          <span id="detailLlm" class="llm-badge">ChatGPT</span>
+          <h2 id="detailTitle"></h2>
+        </div>
+        <button id="closeDetailButton" class="icon-button" type="button" aria-label="상세 닫기">×</button>
+      </div>
+      <div class="dialog-content">
+        <p id="detailDates" class="supporting-text"></p>
+        <pre id="detailContent" class="prompt-content"></pre>
+      </div>
+      <div class="dialog-actions spread">
+        <button id="deletePromptButton" class="danger-button" type="button">삭제</button>
+        <div class="button-row">
+          <button id="favoritePromptButton" class="outlined-button" type="button">즐겨찾기</button>
+          <button id="copyPromptButton" class="outlined-button" type="button">복사</button>
+          <button id="editPromptButton" class="filled-button" type="button">수정</button>
+        </div>
+      </div>
+    </article>
+  </dialog>
+
+  <div id="snackbar" class="snackbar" role="status" aria-live="polite"></div>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
