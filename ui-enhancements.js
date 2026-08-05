@@ -10,6 +10,7 @@ const imageViewerCaption = document.querySelector("#imageViewerCaption");
 
 let archiveImages = [];
 let archiveRefreshTimer = null;
+let archiveViewerHistoryActive = false;
 
 function readArchiveColumns() {
   try {
@@ -104,7 +105,16 @@ function setArchiveColumns(columns) {
 
 function openPromptDatabase() {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open("prompt-vault");
+    const request = indexedDB.open("prompt-vault", 1);
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains("prompts")) {
+        const store = db.createObjectStore("prompts", { keyPath: "id", autoIncrement: true });
+        store.createIndex("updatedAt", "updatedAt");
+        store.createIndex("llmType", "llmType");
+        store.createIndex("isFavorite", "isFavorite");
+      }
+    };
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error ?? new Error("이미지 보관함을 불러올 수 없습니다."));
   });
@@ -195,6 +205,9 @@ function openArchiveImage(index) {
   imageViewerImage.alt = image.imageName;
   imageViewerImage.style.transform = "translate3d(0, 0, 0) scale(1)";
   imageViewerCaption.textContent = `${index + 1} / ${archiveImages.length} · ${image.promptTitle} · ${image.imageName}`;
+  const currentState = history.state && typeof history.state === "object" ? history.state : {};
+  history.pushState({ ...currentState, promptManagerArchiveViewer: true }, "", location.href);
+  archiveViewerHistoryActive = true;
   imageViewerDialog.showModal();
 }
 
@@ -259,7 +272,33 @@ function installArchiveUi() {
   });
 
   document.querySelectorAll('.nav-item:not([data-route="archive"])').forEach((item) => {
-    item.addEventListener("click", deactivateArchive);
+    item.addEventListener("click", () => {
+      deactivateArchive();
+      const currentState = history.state && typeof history.state === "object" ? history.state : {};
+      if (currentState[ARCHIVE_HISTORY_KEY]) {
+        const nextState = { ...currentState };
+        delete nextState[ARCHIVE_HISTORY_KEY];
+        history.replaceState(nextState, "", location.href);
+      }
+    });
+  });
+
+  document.querySelector("#closeImageViewerButton")?.addEventListener("click", (event) => {
+    if (!archiveViewerHistoryActive) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    history.back();
+  }, { capture: true });
+
+  imageViewerDialog?.addEventListener("cancel", (event) => {
+    if (!archiveViewerHistoryActive) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    history.back();
+  }, { capture: true });
+
+  imageViewerDialog?.addEventListener("close", () => {
+    archiveViewerHistoryActive = false;
   });
 
   window.addEventListener("popstate", (event) => {
