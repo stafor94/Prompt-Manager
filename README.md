@@ -6,6 +6,7 @@ ChatGPT, Gemini, Grok, Claude용 프롬프트를 스마트폰 브라우저에 �
 
 - 프롬프트 등록, 조회, 수정, 삭제 및 복제
 - 제목 최대 30자 제한
+- 동일 제목 프롬프트 자동 버전 관리(v1부터 순차 증가)
 - ChatGPT, Gemini, Grok, Claude 분류
 - 제목 및 본문 검색
 - LLM 필터, 생성일·수정일·제목 정렬
