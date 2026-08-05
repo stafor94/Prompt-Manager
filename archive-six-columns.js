@@ -61,9 +61,9 @@ function createSixColumnButton(controls) {
 
 function initArchiveSixColumns() {
   const controls = document.querySelector(".archive-view-controls");
-  if (!controls) return;
+  if (!controls || controls.dataset.sixColumnsInstalled === "true") return false;
 
-  installStylesheet();
+  controls.dataset.sixColumnsInstalled = "true";
   const sixColumnButton = createSixColumnButton(controls);
 
   sixColumnButton.addEventListener("click", () => {
@@ -84,6 +84,21 @@ function initArchiveSixColumns() {
     sixColumnButton.classList.remove("active");
     sixColumnButton.setAttribute("aria-pressed", "false");
   }
+  return true;
 }
 
-initArchiveSixColumns();
+function waitForArchiveControls() {
+  if (initArchiveSixColumns()) return;
+
+  const observer = new MutationObserver(() => {
+    if (initArchiveSixColumns()) observer.disconnect();
+  });
+  observer.observe(document.documentElement, { childList: true, subtree: true });
+
+  window.addEventListener("load", () => {
+    if (initArchiveSixColumns()) observer.disconnect();
+  }, { once: true });
+}
+
+installStylesheet();
+waitForArchiveControls();
