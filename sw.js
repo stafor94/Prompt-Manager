@@ -1,9 +1,11 @@
-const CACHE_NAME = "prompt-manager-shell-v4";
+const CACHE_NAME = "prompt-manager-shell-v5";
 const APP_SHELL = [
   "./",
   "./index.html",
   "./styles.css",
+  "./fixes.css",
   "./app.js",
+  "./navigation.js",
   "./manifest.webmanifest",
   "./icons/icon.svg",
   "./icons/icon-maskable.svg"
