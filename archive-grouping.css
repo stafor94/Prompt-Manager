@@ -123,6 +123,11 @@
   margin-top: 0;
 }
 
+.image-archive-item[hidden],
+.archive-prompt-group[hidden] {
+  display: none !important;
+}
+
 .image-archive-grid[data-mode="GROUPED"] {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
