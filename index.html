@@ -9,11 +9,11 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="프롬프트 매니저">
   <title>Prompt Manager</title>
-  <link rel="manifest" href="./manifest.webmanifest?v=0.2.6">
+  <link rel="manifest" href="./manifest.webmanifest?v=0.2.7">
   <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="./icons/icon.svg">
-  <link rel="stylesheet" href="./styles.css?v=0.2.6">
-  <link rel="stylesheet" href="./fixes.css?v=0.2.6">
+  <link rel="stylesheet" href="./styles.css?v=0.2.7">
+  <link rel="stylesheet" href="./fixes.css?v=0.2.7">
 </head>
 <body>
   <div class="app-shell">
@@ -22,7 +22,7 @@
         <p class="eyebrow">Prompt Manager</p>
         <div class="app-title-row">
           <h1>프롬프트 매니저</h1>
-          <span class="app-version-badge" aria-label="앱 버전 0.2.6">v0.2.6</span>
+          <span class="app-version-badge" aria-label="앱 버전 0.2.7">v0.2.7</span>
         </div>
       </div>
       <button id="installButton" class="icon-button hidden" type="button" aria-label="앱 설치" title="앱 설치">↓</button>
@@ -104,7 +104,7 @@
 
           <section class="card" aria-labelledby="backupHeading">
             <h3 id="backupHeading">백업 및 복원</h3>
-            <p class="supporting-text">브라우저 데이터 삭제에 대비해 JSON 백업 파일을 정기적으로 보관하세요.</p>
+            <p class="supporting-text">첨부 이미지를 포함한 JSON 백업 파일을 정기적으로 보관하세요.</p>
             <div class="button-row wrap">
               <button id="exportButton" class="outlined-button" type="button">JSON 백업</button>
               <button id="restoreButton" class="outlined-button" type="button">JSON 복원</button>
@@ -129,7 +129,7 @@
           <section class="card" aria-labelledby="aboutHeading">
             <h3 id="aboutHeading">앱 정보</h3>
             <dl class="info-list">
-              <div><dt>버전</dt><dd>v0.2.6</dd></div>
+              <div><dt>버전</dt><dd>v0.2.7</dd></div>
               <div><dt>지원 LLM</dt><dd>ChatGPT · Gemini · Grok · Claude</dd></div>
               <div><dt>네트워크 전송</dt><dd>없음</dd></div>
               <div><dt>데이터 위치</dt><dd>현재 기기 브라우저</dd></div>
@@ -150,15 +150,21 @@
         <button id="closeEditorButton" class="icon-button" type="button" aria-label="편집 닫기">×</button>
       </div>
       <div class="dialog-content form-card">
-        <label>
-          <span>LLM 종류</span>
-          <select id="promptLlm" required>
-            <option value="CHATGPT">ChatGPT</option>
-            <option value="GEMINI">Gemini</option>
-            <option value="GROK">Grok</option>
-            <option value="CLAUDE">Claude</option>
-          </select>
-        </label>
+        <div class="editor-options-row">
+          <label class="editor-llm-field">
+            <span>LLM 종류</span>
+            <select id="promptLlm" required>
+              <option value="CHATGPT">ChatGPT</option>
+              <option value="GEMINI">Gemini</option>
+              <option value="GROK">Grok</option>
+              <option value="CLAUDE">Claude</option>
+            </select>
+          </label>
+          <label class="editor-favorite-field checkbox-field">
+            <input id="promptFavoriteInput" type="checkbox">
+            <span>즐겨찾기</span>
+          </label>
+        </div>
         <label>
           <span>제목</span>
           <input id="promptTitleInput" type="text" autocomplete="off" maxlength="50" required>
@@ -182,10 +188,19 @@
           </div>
           <textarea id="promptContentInput" rows="10" required></textarea>
         </div>
-        <label class="checkbox-field">
-          <input id="promptFavoriteInput" type="checkbox">
-          <span>즐겨찾기</span>
-        </label>
+
+        <section class="image-attachment-field" aria-labelledby="imageAttachmentLabel">
+          <div class="image-attachment-header">
+            <div>
+              <span id="imageAttachmentLabel">이미지 첨부</span>
+              <small id="editorImageCount">0 / 5장</small>
+            </div>
+            <button id="addPromptImagesButton" class="outlined-button compact-button" type="button">이미지 추가</button>
+          </div>
+          <input id="promptImageInput" class="visually-hidden" type="file" accept="image/*" multiple>
+          <div id="editorImageList" class="editor-image-list" aria-live="polite"></div>
+          <p id="editorImageEmpty" class="image-empty-message">이미지를 최대 5장까지 첨부할 수 있습니다.</p>
+        </section>
       </div>
       <div class="dialog-actions">
         <button id="cancelEditorButton" class="text-button" type="button">취소</button>
@@ -209,6 +224,10 @@
       <div class="dialog-content">
         <p id="detailDates" class="supporting-text"></p>
         <pre id="detailContent" class="prompt-content"></pre>
+        <section id="detailImagesSection" class="detail-images-section" aria-labelledby="detailImagesHeading" hidden>
+          <h3 id="detailImagesHeading">첨부 이미지</h3>
+          <div id="detailImageStrip" class="detail-image-strip" aria-label="첨부 이미지 썸네일"></div>
+        </section>
       </div>
       <div class="dialog-actions spread">
         <button id="deletePromptButton" class="danger-button" type="button">삭제</button>
@@ -222,6 +241,14 @@
     </article>
   </dialog>
 
+  <dialog id="imageViewerDialog" class="image-viewer-dialog" aria-label="첨부 이미지 확대 보기">
+    <button id="closeImageViewerButton" class="image-viewer-close" type="button" aria-label="이미지 닫기" title="닫기">×</button>
+    <div id="imageViewerStage" class="image-viewer-stage">
+      <img id="imageViewerImage" alt="">
+    </div>
+    <p id="imageViewerCaption" class="image-viewer-caption"></p>
+  </dialog>
+
   <div id="snackbar" class="snackbar" role="status" aria-live="polite"></div>
   <script>
     if ("serviceWorker" in navigator) {
@@ -233,9 +260,9 @@
       });
     }
   </script>
-  <script type="module" src="./app.js?v=0.2.6"></script>
-  <script type="module" src="./llm-filter.js?v=0.2.6"></script>
-  <script type="module" src="./editor-tools.js?v=0.2.6"></script>
-  <script type="module" src="./navigation.js?v=0.2.6"></script>
+  <script type="module" src="./app.js?v=0.2.7"></script>
+  <script type="module" src="./llm-filter.js?v=0.2.7"></script>
+  <script type="module" src="./editor-tools.js?v=0.2.7"></script>
+  <script type="module" src="./navigation.js?v=0.2.7"></script>
 </body>
 </html>
