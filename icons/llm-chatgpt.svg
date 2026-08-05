@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" role="img" aria-label="ChatGPT">
+  <g fill="none" stroke="#000" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M9.2 3.2A4.2 4.2 0 0 1 15.5 6v1.1a4.2 4.2 0 0 1 3.2 6.9l-.7.9a4.2 4.2 0 0 1-3.2 5.7h-1.1a4.2 4.2 0 0 1-6.3-2.8v-1.1A4.2 4.2 0 0 1 4.2 9.8l.7-.9A4.2 4.2 0 0 1 8.1 3.2h1.1Z"/>
+    <path d="m8.2 8.1 3.8-2.2 3.8 2.2v4.4L12 14.7l-3.8-2.2V8.1Z"/>
+    <path d="m8.2 12.5 3.8 2.2v4.2M15.8 12.5 12 10.3 8.2 12.5M12 5.9v4.4"/>
+  </g>
+</svg>
