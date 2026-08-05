@@ -113,11 +113,11 @@ main,
 }
 
 .filter-grid {
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .llm-filter-field {
-  grid-column: 1 / -1;
+  grid-column: 1;
   min-width: 0;
   margin: 0;
   padding: 0;
@@ -164,12 +164,29 @@ main,
   opacity: .72;
 }
 
-.sort-field {
+.list-options {
   grid-column: 1;
+  display: flex;
+  justify-content: flex-end;
+  align-items: flex-end;
+  gap: 12px;
+  min-width: 0;
 }
 
-.filter-grid .checkbox-field {
-  grid-column: 2;
+.sort-field {
+  flex: 0 0 auto;
+  width: max-content;
+  max-width: 100%;
+}
+
+.sort-field select {
+  width: auto;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.list-options .checkbox-field {
+  flex: 0 0 auto;
   align-self: end;
   white-space: nowrap;
 }
@@ -179,16 +196,6 @@ main,
 }
 
 @media (max-width: 520px) {
-  .filter-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .llm-filter-field,
-  .sort-field,
-  .filter-grid .checkbox-field {
-    grid-column: 1;
-  }
-
   .llm-filter-buttons {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -196,5 +203,13 @@ main,
 
   .llm-filter-button {
     width: 100%;
+  }
+
+  .list-options {
+    flex-wrap: wrap;
+  }
+
+  .dialog-actions.spread .button-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
