@@ -49,11 +49,15 @@ main,
 }
 
 .prompt-card h3 {
-  display: block;
+  display: -webkit-box;
   width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  line-height: 1.35;
 }
 
 .prompt-preview,
@@ -62,6 +66,14 @@ main,
   overflow: hidden;
   overflow-wrap: anywhere;
   word-break: break-word;
+}
+
+.prompt-preview {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  font-size: .875rem;
 }
 
 .llm-badge {
