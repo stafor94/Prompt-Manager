@@ -1,3 +1,10 @@
+import {
+  assignPromptVersions,
+  getPromptVersion,
+  isValidPromptVersion,
+  resolvePromptVersion,
+} from "./prompt-version.mjs";
+
 const DB_NAME = "prompt-vault";
 const DB_VERSION = 1;
 const STORE_NAME = "prompts";
@@ -45,6 +52,7 @@ const elements = {
   detailDialog: document.querySelector("#detailDialog"),
   detailLlm: document.querySelector("#detailLlm"),
   detailTitle: document.querySelector("#detailTitle"),
+  detailVersion: document.querySelector("#detailVersion"),
   detailDates: document.querySelector("#detailDates"),
   detailContent: document.querySelector("#detailContent"),
   closeDetailButton: document.querySelector("#closeDetailButton"),
@@ -124,6 +132,18 @@ async function deletePrompt(id) {
   const transaction = db.transaction(STORE_NAME, "readwrite");
   transaction.objectStore(STORE_NAME).delete(id);
   await transactionDone(transaction);
+}
+
+async function ensurePromptVersions(prompts) {
+  const normalized = assignPromptVersions(prompts);
+  if (normalized.changedIndexes.length === 0) return normalized.prompts;
+
+  const db = await openDatabase();
+  const transaction = db.transaction(STORE_NAME, "readwrite");
+  const store = transaction.objectStore(STORE_NAME);
+  normalized.changedIndexes.forEach((index) => store.put(normalized.prompts[index]));
+  await transactionDone(transaction);
+  return normalized.prompts;
 }
 
 function escapeHtml(value) {
@@ -219,13 +239,17 @@ function renderPromptList() {
       </div>
       <h3>${escapeHtml(prompt.title)}</h3>
       <p class="prompt-preview">${escapeHtml(prompt.content)}</p>
-      <div class="prompt-meta">수정 ${formatDate(prompt.updatedAt)}</div>
+      <div class="prompt-meta">
+        <span class="prompt-version">v${getPromptVersion(prompt)}</span>
+        <span>수정 ${formatDate(prompt.updatedAt)}</span>
+      </div>
     </button>
   `).join("");
 }
 
 async function refreshPrompts() {
-  state.prompts = await getAllPrompts();
+  const prompts = await getAllPrompts();
+  state.prompts = await ensurePromptVersions(prompts);
   renderPromptList();
   await updateStorageSummary();
 }
@@ -284,11 +308,13 @@ async function submitPrompt(event) {
 
   const now = Date.now();
   const previous = state.editingPromptId ? await getPrompt(state.editingPromptId) : null;
+  const version = resolvePromptVersion(state.prompts, title, previous);
   const prompt = {
     ...(previous?.id ? { id: previous.id } : {}),
     llmType,
     title,
     content,
+    version,
     createdAt: previous?.createdAt ?? now,
     updatedAt: now,
     isFavorite: elements.promptFavoriteInput.checked,
@@ -310,6 +336,7 @@ async function openDetail(id) {
   elements.detailLlm.textContent = LLM_LABELS[prompt.llmType] ?? prompt.llmType;
   elements.detailLlm.dataset.llm = prompt.llmType;
   elements.detailTitle.textContent = prompt.title;
+  if (elements.detailVersion) elements.detailVersion.textContent = `v${getPromptVersion(prompt)}`;
   elements.detailDates.textContent = `생성 ${formatDate(prompt.createdAt)} · 수정 ${formatDate(prompt.updatedAt)}`;
   elements.detailContent.textContent = prompt.content;
   elements.favoritePromptButton.textContent = prompt.isFavorite ? "즐겨찾기 해제" : "즐겨찾기";
@@ -348,11 +375,13 @@ function validateBackup(data) {
     if (typeof prompt.content !== "string" || !prompt.content.trim()) fail("본문이 없습니다.");
     if (!Number.isFinite(prompt.createdAt) || prompt.createdAt < 0) fail("생성 일시가 올바르지 않습니다.");
     if (!Number.isFinite(prompt.updatedAt) || prompt.updatedAt < 0) fail("수정 일시가 올바르지 않습니다.");
+    if (prompt.version !== undefined && !isValidPromptVersion(prompt.version)) fail("버전 값이 올바르지 않습니다.");
     if (typeof prompt.isFavorite !== "boolean") fail("즐겨찾기 값이 올바르지 않습니다.");
     return {
       llmType: prompt.llmType,
       title: prompt.title,
       content: prompt.content,
+      ...(isValidPromptVersion(prompt.version) ? { version: prompt.version } : {}),
       createdAt: prompt.createdAt,
       updatedAt: prompt.updatedAt,
       isFavorite: prompt.isFavorite,
