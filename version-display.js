@@ -1,5 +1,5 @@
 (() => {
-  const APP_VERSION = "1.0.5";
+  const APP_VERSION = "1.0.6";
 
   function applyVersion() {
     document.querySelectorAll(".app-version-badge").forEach((badge) => {
@@ -32,5 +32,9 @@
 
   import(`./library-controls.js?v=${APP_VERSION}`).catch((error) => {
     console.error("목록 제어 UI를 불러오지 못했습니다.", error);
+  });
+
+  import(`./archive-six-columns.js?v=${APP_VERSION}`).catch((error) => {
+    console.error("보관함 6열 UI를 불러오지 못했습니다.", error);
   });
 })();
