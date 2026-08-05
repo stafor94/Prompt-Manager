@@ -58,18 +58,20 @@
               <option value="ALL" selected>전체</option>
             </select>
           </fieldset>
-          <label class="sort-field">
-            <span>정렬</span>
-            <select id="sortOrder">
-              <option value="UPDATED_DESC">최근 수정순</option>
-              <option value="CREATED_DESC">최근 생성순</option>
-              <option value="TITLE_ASC">제목순</option>
-            </select>
-          </label>
-          <label class="checkbox-field">
-            <input id="favoritesOnly" type="checkbox">
-            <span>즐겨찾기만</span>
-          </label>
+          <div class="list-options">
+            <label class="sort-field">
+              <span>정렬</span>
+              <select id="sortOrder">
+                <option value="UPDATED_DESC">최근 수정순</option>
+                <option value="CREATED_DESC">최근 생성순</option>
+                <option value="TITLE_ASC">제목순</option>
+              </select>
+            </label>
+            <label class="checkbox-field">
+              <input id="favoritesOnly" type="checkbox">
+              <span>즐겨찾기만</span>
+            </label>
+          </div>
         </div>
 
         <div id="promptList" class="prompt-list" aria-live="polite"></div>
@@ -124,7 +126,7 @@
           <section class="card" aria-labelledby="aboutHeading">
             <h3 id="aboutHeading">앱 정보</h3>
             <dl class="info-list">
-              <div><dt>버전</dt><dd>0.2.3</dd></div>
+              <div><dt>버전</dt><dd>0.2.4</dd></div>
               <div><dt>지원 LLM</dt><dd>ChatGPT · Gemini · Grok · Claude</dd></div>
               <div><dt>네트워크 전송</dt><dd>없음</dd></div>
               <div><dt>데이터 위치</dt><dd>현재 기기 브라우저</dd></div>
@@ -156,8 +158,8 @@
         </label>
         <label>
           <span>제목</span>
-          <input id="promptTitleInput" type="text" autocomplete="off" required>
-          <small id="titleCount">0 / 권장 200자</small>
+          <input id="promptTitleInput" type="text" autocomplete="off" maxlength="30" required>
+          <small id="titleCount">0 / 30자</small>
         </label>
         <label>
           <span>본문</span>
@@ -192,8 +194,9 @@
         <button id="deletePromptButton" class="danger-button" type="button">삭제</button>
         <div class="button-row">
           <button id="favoritePromptButton" class="outlined-button" type="button">즐겨찾기</button>
-          <button id="copyPromptButton" class="outlined-button" type="button">복사</button>
           <button id="editPromptButton" class="filled-button" type="button">수정</button>
+          <button id="copyPromptButton" class="outlined-button" type="button">복사</button>
+          <button id="duplicatePromptButton" class="outlined-button" type="button">복제</button>
         </div>
       </div>
     </article>
