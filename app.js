@@ -2,6 +2,7 @@ const DB_NAME = "prompt-vault";
 const DB_VERSION = 1;
 const STORE_NAME = "prompts";
 const BACKUP_SCHEMA_VERSION = 1;
+const TITLE_MAX_LENGTH = 30;
 const LLM_LABELS = {
   CHATGPT: "ChatGPT",
   GEMINI: "Gemini",
@@ -50,6 +51,7 @@ const elements = {
   deletePromptButton: document.querySelector("#deletePromptButton"),
   favoritePromptButton: document.querySelector("#favoritePromptButton"),
   copyPromptButton: document.querySelector("#copyPromptButton"),
+  duplicatePromptButton: document.querySelector("#duplicatePromptButton"),
   editPromptButton: document.querySelector("#editPromptButton"),
   exportButton: document.querySelector("#exportButton"),
   restoreButton: document.querySelector("#restoreButton"),
@@ -143,6 +145,10 @@ function formatDate(timestamp) {
   }).format(new Date(timestamp));
 }
 
+function getCharacterLength(value) {
+  return [...value].length;
+}
+
 function currentEditorValue() {
   return JSON.stringify({
     llmType: elements.promptLlm.value,
@@ -224,15 +230,18 @@ async function refreshPrompts() {
   await updateStorageSummary();
 }
 
-function openEditor(prompt = null) {
-  state.editingPromptId = prompt?.id ?? null;
-  elements.editorTitle.textContent = prompt ? "프롬프트 수정" : "새 프롬프트";
+function openEditor(prompt = null, options = {}) {
+  const asDuplicate = options.asDuplicate === true;
+  state.editingPromptId = asDuplicate ? null : (prompt?.id ?? null);
+  elements.editorTitle.textContent = asDuplicate
+    ? "프롬프트 복제"
+    : (prompt ? "프롬프트 수정" : "새 프롬프트");
   elements.promptLlm.value = prompt?.llmType ?? "CHATGPT";
   elements.promptTitleInput.value = prompt?.title ?? "";
   elements.promptContentInput.value = prompt?.content ?? "";
-  elements.promptFavoriteInput.checked = prompt?.isFavorite ?? false;
+  elements.promptFavoriteInput.checked = asDuplicate ? false : (prompt?.isFavorite ?? false);
   updateTitleCount();
-  state.editorSnapshot = currentEditorValue();
+  state.editorSnapshot = asDuplicate ? null : currentEditorValue();
   elements.editorDialog.showModal();
   setTimeout(() => elements.promptTitleInput.focus(), 0);
 }
@@ -243,8 +252,8 @@ function tryCloseEditor() {
 }
 
 function updateTitleCount() {
-  const length = [...elements.promptTitleInput.value].length;
-  elements.titleCount.textContent = `${length} / 권장 200자${length > 200 ? " · 제목이 깁니다" : ""}`;
+  const length = getCharacterLength(elements.promptTitleInput.value);
+  elements.titleCount.textContent = `${length} / ${TITLE_MAX_LENGTH}자`;
 }
 
 async function submitPrompt(event) {
@@ -259,6 +268,11 @@ async function submitPrompt(event) {
   }
   if (!title.trim()) {
     showSnackbar("제목을 입력하세요.");
+    elements.promptTitleInput.focus();
+    return;
+  }
+  if (getCharacterLength(title) > TITLE_MAX_LENGTH) {
+    showSnackbar(`제목은 ${TITLE_MAX_LENGTH}자까지 입력할 수 있습니다.`);
     elements.promptTitleInput.focus();
     return;
   }
@@ -330,6 +344,7 @@ function validateBackup(data) {
     if (!prompt || typeof prompt !== "object") fail("객체가 아닙니다.");
     if (!VALID_LLM_TYPES.has(prompt.llmType)) fail("LLM 종류가 올바르지 않습니다.");
     if (typeof prompt.title !== "string" || !prompt.title.trim()) fail("제목이 없습니다.");
+    if (getCharacterLength(prompt.title) > TITLE_MAX_LENGTH) fail(`제목은 ${TITLE_MAX_LENGTH}자까지 허용됩니다.`);
     if (typeof prompt.content !== "string" || !prompt.content.trim()) fail("본문이 없습니다.");
     if (!Number.isFinite(prompt.createdAt) || prompt.createdAt < 0) fail("생성 일시가 올바르지 않습니다.");
     if (!Number.isFinite(prompt.updatedAt) || prompt.updatedAt < 0) fail("수정 일시가 올바르지 않습니다.");
@@ -441,6 +456,11 @@ function bindEvents() {
   elements.copyPromptButton.addEventListener("click", async () => {
     const prompt = await getPrompt(state.activePromptId);
     if (prompt) await copyTextExactly(prompt.content);
+  });
+  elements.duplicatePromptButton.addEventListener("click", async () => {
+    const prompt = await getPrompt(state.activePromptId);
+    elements.detailDialog.close();
+    if (prompt) openEditor(prompt, { asDuplicate: true });
   });
   elements.editPromptButton.addEventListener("click", async () => {
     const prompt = await getPrompt(state.activePromptId);
