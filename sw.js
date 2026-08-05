@@ -1,14 +1,15 @@
-const CACHE_NAME = "prompt-manager-shell-v15";
+const CACHE_NAME = "prompt-manager-shell-v16";
 const APP_SHELL = [
   "./",
   "./index.html",
-  "./styles.css",
-  "./fixes.css",
-  "./app.js",
+  "./styles.css?v=0.2.6",
+  "./fixes.css?v=0.2.6",
+  "./app.js?v=0.2.6",
   "./prompt-version.mjs",
-  "./llm-filter.js",
-  "./navigation.js",
-  "./manifest.webmanifest",
+  "./llm-filter.js?v=0.2.6",
+  "./editor-tools.js?v=0.2.6",
+  "./navigation.js?v=0.2.6",
+  "./manifest.webmanifest?v=0.2.6",
   "./icons/icon.svg",
   "./icons/icon-maskable.svg",
   "./icons/llm-chatgpt.svg",
