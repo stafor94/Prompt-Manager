@@ -10,12 +10,15 @@ const addPromptButton = document.querySelector("#addPromptButton");
 const editPromptButton = document.querySelector("#editPromptButton");
 const duplicatePromptButton = document.querySelector("#duplicatePromptButton");
 const promptLlm = document.querySelector("#promptLlm");
+const promptContentInput = document.querySelector("#promptContentInput");
+const snackbar = document.querySelector("#snackbar");
 
 let overlayHistoryActive = false;
 let handlingPopState = false;
 let closeTimer = null;
 let openingNewPrompt = false;
 let newPromptSession = false;
+let editorToolSnackbarTimer = null;
 
 function readLastNewPromptLlm(fallback) {
   try {
@@ -73,6 +76,94 @@ function installNewPromptLlmDefault() {
   editorDialog?.addEventListener("close", () => {
     openingNewPrompt = false;
     newPromptSession = false;
+  });
+}
+
+function showEditorToolMessage(message) {
+  if (!snackbar) return;
+  clearTimeout(editorToolSnackbarTimer);
+  snackbar.textContent = message;
+  snackbar.classList.add("show");
+  editorToolSnackbarTimer = setTimeout(() => snackbar.classList.remove("show"), 2600);
+}
+
+function dispatchContentInput() {
+  promptContentInput?.dispatchEvent(new Event("input", { bubbles: true }));
+}
+
+function installContentEditorTools() {
+  if (!promptContentInput) return;
+  const originalLabel = promptContentInput.closest("label");
+  if (!originalLabel || document.querySelector("#clearPromptContentButton")) return;
+
+  const field = document.createElement("div");
+  field.className = "content-editor-field";
+
+  const labelRow = document.createElement("div");
+  labelRow.className = "field-label-row";
+
+  const contentLabel = document.createElement("label");
+  contentLabel.htmlFor = promptContentInput.id;
+  contentLabel.textContent = "본문";
+
+  const actions = document.createElement("div");
+  actions.className = "field-action-buttons";
+  actions.setAttribute("aria-label", "본문 입력 도구");
+  actions.innerHTML = `
+    <button id="clearPromptContentButton" class="field-icon-button" type="button" aria-label="본문 전체 지우기" title="본문 전체 지우기">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13M10 11v5M14 11v5" />
+      </svg>
+    </button>
+    <button id="pastePromptContentButton" class="field-icon-button" type="button" aria-label="클립보드 내용 붙여넣기" title="클립보드 내용 붙여넣기">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path d="M9 5h6M9 3h6v4H9zM8 5H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8M16 13v8M12 17h8" />
+      </svg>
+    </button>
+  `;
+
+  labelRow.append(contentLabel, actions);
+  originalLabel.replaceWith(field);
+  field.append(labelRow, promptContentInput);
+
+  const clearButton = actions.querySelector("#clearPromptContentButton");
+  const pasteButton = actions.querySelector("#pastePromptContentButton");
+
+  clearButton?.addEventListener("click", () => {
+    if (!promptContentInput.value) {
+      showEditorToolMessage("본문이 이미 비어 있습니다.");
+      return;
+    }
+    promptContentInput.value = "";
+    dispatchContentInput();
+    showEditorToolMessage("본문을 지웠습니다.");
+  });
+
+  pasteButton?.addEventListener("click", async () => {
+    if (!navigator.clipboard?.readText) {
+      showEditorToolMessage("이 브라우저에서는 클립보드 붙여넣기를 지원하지 않습니다.");
+      return;
+    }
+
+    try {
+      const text = await navigator.clipboard.readText();
+      if (!text) {
+        showEditorToolMessage("클립보드가 비어 있습니다.");
+        return;
+      }
+
+      const start = Number.isInteger(promptContentInput.selectionStart)
+        ? promptContentInput.selectionStart
+        : promptContentInput.value.length;
+      const end = Number.isInteger(promptContentInput.selectionEnd)
+        ? promptContentInput.selectionEnd
+        : start;
+      promptContentInput.setRangeText(text, start, end, "end");
+      dispatchContentInput();
+      showEditorToolMessage("클립보드 내용을 붙여넣었습니다.");
+    } catch {
+      showEditorToolMessage("클립보드를 읽을 수 없습니다. 브라우저 권한을 확인하세요.");
+    }
   });
 }
 
@@ -152,6 +243,7 @@ function closeOverlayFromBack() {
 }
 
 installNewPromptLlmDefault();
+installContentEditorTools();
 
 const dialogObserver = new MutationObserver(syncDialogHistory);
 [editorDialog, detailDialog].forEach((dialog) => {
