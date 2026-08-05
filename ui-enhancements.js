@@ -1,6 +1,9 @@
+const APP_VERSION = "1.0.2";
 const ARCHIVE_COLUMNS_KEY = "prompt-manager-archive-columns";
+const ARCHIVE_MODE_KEY = "prompt-manager-archive-mode";
 const ARCHIVE_HISTORY_KEY = "promptManagerArchive";
 const ARCHIVE_COLUMN_OPTIONS = new Set(["2", "3", "4"]);
+const ARCHIVE_MODE_OPTIONS = new Set(["ALL", "GROUPED"]);
 
 const addPromptButton = document.querySelector("#addPromptButton");
 const promptList = document.querySelector("#promptList");
@@ -11,6 +14,7 @@ const imageViewerCaption = document.querySelector("#imageViewerCaption");
 let archiveImages = [];
 let archiveRefreshTimer = null;
 let archiveViewerHistoryActive = false;
+let archiveMode = readArchiveMode();
 
 function readArchiveColumns() {
   try {
@@ -27,6 +31,46 @@ function saveArchiveColumns(columns) {
     localStorage.setItem(ARCHIVE_COLUMNS_KEY, columns);
   } catch {
     // 저장소 접근이 제한된 환경에서는 현재 세션에만 적용합니다.
+  }
+}
+
+function readArchiveMode() {
+  try {
+    const value = localStorage.getItem(ARCHIVE_MODE_KEY);
+    return ARCHIVE_MODE_OPTIONS.has(value) ? value : "ALL";
+  } catch {
+    return "ALL";
+  }
+}
+
+function saveArchiveMode(mode) {
+  if (!ARCHIVE_MODE_OPTIONS.has(mode)) return;
+  try {
+    localStorage.setItem(ARCHIVE_MODE_KEY, mode);
+  } catch {
+    // 저장소 접근이 제한된 환경에서는 현재 세션에만 적용합니다.
+  }
+}
+
+function installVersionMetadata() {
+  document.querySelectorAll(".app-version-badge").forEach((badge) => {
+    badge.textContent = `v${APP_VERSION}`;
+    badge.setAttribute("aria-label", `앱 버전 ${APP_VERSION}`);
+  });
+
+  document.querySelectorAll(".info-list div").forEach((row) => {
+    if (row.querySelector("dt")?.textContent.trim() === "버전") {
+      const value = row.querySelector("dd");
+      if (value) value.textContent = `v${APP_VERSION}`;
+    }
+  });
+
+  if (!document.querySelector('link[data-archive-grouping-style]')) {
+    const link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.href = `./archive-grouping.css?v=${APP_VERSION}`;
+    link.dataset.archiveGroupingStyle = "true";
+    document.head.append(link);
   }
 }
 
@@ -63,13 +107,19 @@ function createArchiveScreen() {
         <h2 id="archiveHeading">보관함</h2>
         <p id="archiveImageCount" class="supporting-text">첨부 이미지 0장</p>
       </div>
-      <div class="archive-view-controls" role="group" aria-label="이미지 보기 방식">
-        <button class="archive-view-button" type="button" data-archive-columns="2" aria-label="한 행에 이미지 2개" title="큰 썸네일">2열</button>
-        <button class="archive-view-button" type="button" data-archive-columns="3" aria-label="한 행에 이미지 3개" title="보통 썸네일">3열</button>
-        <button class="archive-view-button" type="button" data-archive-columns="4" aria-label="한 행에 이미지 4개" title="작은 썸네일">4열</button>
+      <div class="archive-toolbar">
+        <div class="archive-mode-controls" role="group" aria-label="이미지 묶음 방식">
+          <button class="archive-mode-button" type="button" data-archive-mode="ALL" aria-label="모든 이미지를 한 목록으로 보기">전체</button>
+          <button class="archive-mode-button" type="button" data-archive-mode="GROUPED" aria-label="동일한 프롬프트의 이미지끼리 묶어 보기">프롬프트별</button>
+        </div>
+        <div class="archive-view-controls" role="group" aria-label="이미지 보기 방식">
+          <button class="archive-view-button" type="button" data-archive-columns="2" aria-label="한 행에 이미지 2개" title="큰 썸네일">2열</button>
+          <button class="archive-view-button" type="button" data-archive-columns="3" aria-label="한 행에 이미지 3개" title="보통 썸네일">3열</button>
+          <button class="archive-view-button" type="button" data-archive-columns="4" aria-label="한 행에 이미지 4개" title="작은 썸네일">4열</button>
+        </div>
       </div>
     </div>
-    <div id="imageArchiveGrid" class="image-archive-grid" data-columns="3" aria-live="polite"></div>
+    <div id="imageArchiveGrid" class="image-archive-grid" data-columns="3" data-mode="ALL" aria-live="polite"></div>
     <div id="archiveEmptyState" class="empty-state hidden">
       <strong>첨부된 이미지가 없습니다.</strong>
       <p>프롬프트에 이미지를 첨부하면 이곳에 모아서 표시됩니다.</p>
@@ -101,6 +151,19 @@ function setArchiveColumns(columns) {
     button.setAttribute("aria-pressed", String(active));
   });
   saveArchiveColumns(resolved);
+}
+
+function setArchiveMode(mode) {
+  archiveMode = ARCHIVE_MODE_OPTIONS.has(mode) ? mode : "ALL";
+  const grid = document.querySelector("#imageArchiveGrid");
+  if (grid) grid.dataset.mode = archiveMode;
+  document.querySelectorAll("[data-archive-mode]").forEach((button) => {
+    const active = button.dataset.archiveMode === archiveMode;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-pressed", String(active));
+  });
+  saveArchiveMode(archiveMode);
+  renderArchiveContent();
 }
 
 function openPromptDatabase() {
@@ -155,7 +218,28 @@ function buildArchiveImages(prompts) {
     });
 }
 
-function createArchiveImageItem(image, index) {
+function buildArchiveGroups(images) {
+  const groups = [];
+  const groupsByPromptId = new Map();
+
+  images.forEach((image, archiveIndex) => {
+    let group = groupsByPromptId.get(image.promptId);
+    if (!group) {
+      group = {
+        promptId: image.promptId,
+        promptTitle: image.promptTitle,
+        images: [],
+      };
+      groupsByPromptId.set(image.promptId, group);
+      groups.push(group);
+    }
+    group.images.push({ ...image, archiveIndex });
+  });
+
+  return groups;
+}
+
+function createArchiveImageItem(image, index, showCaption = true) {
   const button = document.createElement("button");
   button.type = "button";
   button.className = "image-archive-item";
@@ -166,13 +250,57 @@ function createArchiveImageItem(image, index) {
   thumbnail.src = image.dataUrl;
   thumbnail.alt = image.imageName;
   thumbnail.loading = "lazy";
+  button.append(thumbnail);
 
-  const caption = document.createElement("span");
-  caption.className = "image-archive-caption";
-  caption.textContent = image.promptTitle;
+  if (showCaption) {
+    const caption = document.createElement("span");
+    caption.className = "image-archive-caption";
+    caption.textContent = image.promptTitle;
+    button.append(caption);
+  }
 
-  button.append(thumbnail, caption);
   return button;
+}
+
+function createArchiveGroup(group) {
+  const section = document.createElement("section");
+  section.className = "archive-prompt-group";
+  section.dataset.promptId = String(group.promptId);
+
+  const header = document.createElement("div");
+  header.className = "archive-prompt-group-header";
+
+  const title = document.createElement("h3");
+  title.textContent = group.promptTitle;
+  title.title = group.promptTitle;
+
+  const count = document.createElement("span");
+  count.className = "archive-prompt-group-count";
+  count.textContent = `${group.images.length}장`;
+
+  const imageGrid = document.createElement("div");
+  imageGrid.className = "archive-prompt-group-grid";
+  imageGrid.replaceChildren(
+    ...group.images.map((image) => createArchiveImageItem(image, image.archiveIndex, false)),
+  );
+
+  header.append(title, count);
+  section.append(header, imageGrid);
+  return section;
+}
+
+function renderArchiveContent() {
+  const grid = document.querySelector("#imageArchiveGrid");
+  if (!grid) return;
+  grid.dataset.mode = archiveMode;
+
+  if (archiveMode === "GROUPED") {
+    const groups = buildArchiveGroups(archiveImages);
+    grid.replaceChildren(...groups.map(createArchiveGroup));
+    return;
+  }
+
+  grid.replaceChildren(...archiveImages.map((image, index) => createArchiveImageItem(image, index)));
 }
 
 async function renderArchiveGallery() {
@@ -186,7 +314,7 @@ async function renderArchiveGallery() {
   const promptCount = new Set(archiveImages.map((image) => image.promptId)).size;
   count.textContent = `첨부 이미지 ${archiveImages.length}장 · 연결된 프롬프트 ${promptCount}개`;
   empty.classList.toggle("hidden", archiveImages.length > 0);
-  grid.replaceChildren(...archiveImages.map(createArchiveImageItem));
+  renderArchiveContent();
 }
 
 function scheduleArchiveRefresh() {
@@ -243,7 +371,7 @@ function activateArchive() {
 }
 
 function deactivateArchive() {
-  document.querySelector('#archiveScreen')?.classList.remove("active");
+  document.querySelector("#archiveScreen")?.classList.remove("active");
   const archiveNavItem = document.querySelector('.nav-item[data-route="archive"]');
   archiveNavItem?.classList.remove("active");
   archiveNavItem?.setAttribute("aria-current", "false");
@@ -253,9 +381,14 @@ function installArchiveUi() {
   createArchiveScreen();
   createArchiveNavigation();
   setArchiveColumns(readArchiveColumns());
+  setArchiveMode(archiveMode);
 
   document.querySelectorAll("[data-archive-columns]").forEach((button) => {
     button.addEventListener("click", () => setArchiveColumns(button.dataset.archiveColumns));
+  });
+
+  document.querySelectorAll("[data-archive-mode]").forEach((button) => {
+    button.addEventListener("click", () => setArchiveMode(button.dataset.archiveMode));
   });
 
   document.querySelector("#imageArchiveGrid")?.addEventListener("click", (event) => {
@@ -321,5 +454,6 @@ function installArchiveUi() {
   scheduleArchiveRefresh();
 }
 
+installVersionMetadata();
 installLibraryLayout();
 installArchiveUi();
