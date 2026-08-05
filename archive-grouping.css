@@ -26,6 +26,53 @@
   overflow-wrap: normal;
 }
 
+.archive-llm-filter-field {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.archive-llm-filter-field legend {
+  margin-bottom: 7px;
+  padding: 0;
+  color: var(--on-surface-variant);
+  font-size: .78rem;
+  font-weight: 800;
+}
+
+.archive-llm-filter-buttons {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+}
+
+.archive-llm-filter-button {
+  min-width: 0;
+  min-height: 44px;
+  padding: 0 8px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--outline) 38%, transparent);
+  border-radius: 12px;
+  color: var(--on-surface-variant);
+  background: var(--surface-container);
+  cursor: pointer;
+  font-size: .78rem;
+  font-weight: 800;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.archive-llm-filter-button.active,
+.archive-llm-filter-button[aria-pressed="true"] {
+  border-color: color-mix(in srgb, var(--primary) 52%, transparent);
+  color: var(--on-primary-container);
+  background: var(--primary-container);
+}
+
 .archive-toolbar {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr);
@@ -140,12 +187,6 @@
   background: var(--surface);
 }
 
-@media (max-width: 380px) {
-  .archive-toolbar {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-
 @media (max-width: 520px) {
   #archiveScreen {
     padding-top: 8px;
@@ -155,7 +196,17 @@
     margin-top: 8px;
   }
 
+  .archive-llm-filter-buttons {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .archive-prompt-group {
     padding: 12px;
+  }
+}
+
+@media (max-width: 380px) {
+  .archive-toolbar {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
