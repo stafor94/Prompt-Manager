@@ -1,18 +1,18 @@
-const CACHE_NAME = "prompt-manager-shell-v21";
+const CACHE_NAME = "prompt-manager-shell-v22";
 const APP_SHELL = [
   "./",
   "./index.html",
-  "./styles.css?v=1.0.1",
-  "./fixes.css?v=1.0.1",
-  "./detail-layout.css?v=1.0.1",
+  "./styles.css?v=1.0.2",
+  "./fixes.css?v=1.0.2",
+  "./detail-layout.css?v=1.0.2",
   "./archive-grouping.css?v=1.0.2",
-  "./app.js?v=1.0.1",
+  "./app.js?v=1.0.2",
   "./prompt-version.mjs",
-  "./llm-filter.js?v=1.0.1",
-  "./editor-tools.js?v=1.0.1",
-  "./navigation.js?v=1.0.1",
-  "./ui-enhancements.js?v=1.0.1",
-  "./manifest.webmanifest?v=1.0.1",
+  "./llm-filter.js?v=1.0.2",
+  "./editor-tools.js?v=1.0.2",
+  "./navigation.js?v=1.0.2",
+  "./ui-enhancements.js?v=1.0.2",
+  "./manifest.webmanifest?v=1.0.2",
   "./icons/icon.svg",
   "./icons/icon-maskable.svg",
   "./icons/llm-chatgpt.svg",
@@ -34,6 +34,15 @@ self.addEventListener("activate", (event) => {
   );
 });
 
+async function fetchAndCache(request, cacheKey = request) {
+  const response = await fetch(request, { cache: "no-cache" });
+  if (response.ok) {
+    const cache = await caches.open(CACHE_NAME);
+    await cache.put(cacheKey, response.clone());
+  }
+  return response;
+}
+
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
   const url = new URL(event.request.url);
@@ -41,13 +50,19 @@ self.addEventListener("fetch", (event) => {
 
   if (event.request.mode === "navigate") {
     event.respondWith(
-      fetch(event.request)
-        .then((response) => {
-          const copy = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put("./index.html", copy));
-          return response;
-        })
+      fetchAndCache(event.request, "./index.html")
         .catch(() => caches.match("./index.html"))
+    );
+    return;
+  }
+
+  const networkFirst = new Set(["script", "style", "manifest", "worker"])
+    .has(event.request.destination);
+
+  if (networkFirst) {
+    event.respondWith(
+      fetchAndCache(event.request)
+        .catch(() => caches.match(event.request))
     );
     return;
   }
@@ -55,13 +70,7 @@ self.addEventListener("fetch", (event) => {
   event.respondWith(
     caches.match(event.request).then((cached) => {
       if (cached) return cached;
-      return fetch(event.request).then((response) => {
-        if (response.ok) {
-          const copy = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
-        }
-        return response;
-      });
+      return fetchAndCache(event.request);
     })
   );
 });
