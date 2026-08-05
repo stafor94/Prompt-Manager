@@ -2,7 +2,12 @@ const DB_NAME = "prompt-vault";
 const DB_VERSION = 1;
 const STORE_NAME = "prompts";
 const BACKUP_SCHEMA_VERSION = 1;
-const LLM_LABELS = { CHATGPT: "ChatGPT", GEMINI: "Gemini", GROK: "Grok" };
+const LLM_LABELS = {
+  CHATGPT: "ChatGPT",
+  GEMINI: "Gemini",
+  GROK: "Grok",
+  CLAUDE: "Claude",
+};
 const VALID_LLM_TYPES = new Set(Object.keys(LLM_LABELS));
 
 const state = {
@@ -46,13 +51,6 @@ const elements = {
   favoritePromptButton: document.querySelector("#favoritePromptButton"),
   copyPromptButton: document.querySelector("#copyPromptButton"),
   editPromptButton: document.querySelector("#editPromptButton"),
-  transformSource: document.querySelector("#transformSource"),
-  transformTarget: document.querySelector("#transformTarget"),
-  transformInput: document.querySelector("#transformInput"),
-  transformOutput: document.querySelector("#transformOutput"),
-  transformButton: document.querySelector("#transformButton"),
-  copyTransformButton: document.querySelector("#copyTransformButton"),
-  saveTransformButton: document.querySelector("#saveTransformButton"),
   exportButton: document.querySelector("#exportButton"),
   restoreButton: document.querySelector("#restoreButton"),
   restoreMode: document.querySelector("#restoreMode"),
@@ -84,10 +82,18 @@ function openDatabase() {
   return dbPromise;
 }
 
-async function requestToPromise(request) {
+function requestToPromise(request) {
   return new Promise((resolve, reject) => {
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error ?? new Error("요청을 처리할 수 없습니다."));
+  });
+}
+
+function transactionDone(transaction) {
+  return new Promise((resolve, reject) => {
+    transaction.oncomplete = () => resolve();
+    transaction.onerror = () => reject(transaction.error ?? new Error("트랜잭션 오류"));
+    transaction.onabort = () => reject(transaction.error ?? new Error("트랜잭션 취소"));
   });
 }
 
@@ -116,14 +122,6 @@ async function deletePrompt(id) {
   const transaction = db.transaction(STORE_NAME, "readwrite");
   transaction.objectStore(STORE_NAME).delete(id);
   await transactionDone(transaction);
-}
-
-function transactionDone(transaction) {
-  return new Promise((resolve, reject) => {
-    transaction.oncomplete = () => resolve();
-    transaction.onerror = () => reject(transaction.error ?? new Error("트랜잭션 오류"));
-    transaction.onabort = () => reject(transaction.error ?? new Error("트랜잭션 취소"));
-  });
 }
 
 function escapeHtml(value) {
@@ -210,7 +208,7 @@ function renderPromptList() {
   elements.promptList.innerHTML = prompts.map((prompt) => `
     <button class="prompt-card" type="button" data-prompt-id="${prompt.id}">
       <div class="prompt-card-header">
-        <span class="llm-badge" data-llm="${prompt.llmType}">${LLM_LABELS[prompt.llmType]}</span>
+        <span class="llm-badge" data-llm="${prompt.llmType}">${LLM_LABELS[prompt.llmType] ?? prompt.llmType}</span>
         <span class="favorite-mark" aria-label="${prompt.isFavorite ? "즐겨찾기" : "일반"}">${prompt.isFavorite ? "★" : ""}</span>
       </div>
       <h3>${escapeHtml(prompt.title)}</h3>
@@ -253,6 +251,12 @@ async function submitPrompt(event) {
   event.preventDefault();
   const title = elements.promptTitleInput.value;
   const content = elements.promptContentInput.value;
+  const llmType = elements.promptLlm.value;
+
+  if (!VALID_LLM_TYPES.has(llmType)) {
+    showSnackbar("LLM 종류를 선택하세요.");
+    return;
+  }
   if (!title.trim()) {
     showSnackbar("제목을 입력하세요.");
     elements.promptTitleInput.focus();
@@ -268,7 +272,7 @@ async function submitPrompt(event) {
   const previous = state.editingPromptId ? await getPrompt(state.editingPromptId) : null;
   const prompt = {
     ...(previous?.id ? { id: previous.id } : {}),
-    llmType: elements.promptLlm.value,
+    llmType,
     title,
     content,
     createdAt: previous?.createdAt ?? now,
@@ -289,7 +293,7 @@ async function openDetail(id) {
     return;
   }
   state.activePromptId = prompt.id;
-  elements.detailLlm.textContent = LLM_LABELS[prompt.llmType];
+  elements.detailLlm.textContent = LLM_LABELS[prompt.llmType] ?? prompt.llmType;
   elements.detailLlm.dataset.llm = prompt.llmType;
   elements.detailTitle.textContent = prompt.title;
   elements.detailDates.textContent = `생성 ${formatDate(prompt.createdAt)} · 수정 ${formatDate(prompt.updatedAt)}`;
@@ -314,21 +318,6 @@ async function copyTextExactly(text) {
     if (!copied) throw new Error("클립보드 복사 실패");
   }
   showSnackbar("본문을 복사했습니다.");
-}
-
-function transformPrompt(content, source, target) {
-  if (!content.trim()) throw new Error("변환할 원문을 입력하세요.");
-  if (!VALID_LLM_TYPES.has(source) || !VALID_LLM_TYPES.has(target)) throw new Error("지원하지 않는 LLM입니다.");
-  if (source === target) return content;
-
-  const targetName = LLM_LABELS[target];
-  const sourceName = LLM_LABELS[source];
-  const templates = {
-    CHATGPT: `# 실행 요청\n\n아래 원문의 의미, 요구사항, 제약조건을 변경하지 말고 그대로 수행하세요. 원문에 없는 사실을 추가하지 마세요.\n\n## 원문 (${sourceName})\n${content}`,
-    GEMINI: `<prompt source="${sourceName}">\n  <instruction>원문의 의미, 요구사항, 제약조건을 변경하지 말고 그대로 수행하세요. 원문에 없는 사실을 추가하지 마세요.</instruction>\n  <original>\n${content}\n  </original>\n</prompt>`,
-    GROK: `### Original request from ${sourceName}\n${content}\n\n### Execution rule for ${targetName}\nPreserve every requirement and constraint in the original request. Do not invent facts or silently change the user's intent.`,
-  };
-  return templates[target];
 }
 
 function validateBackup(data) {
@@ -392,9 +381,9 @@ async function restoreBackup(file) {
   if (mode === "REPLACE") store.clear();
   let candidates = incoming;
   if (mode === "DEDUPLICATE") {
-    const existingKeys = new Set(state.prompts.map((p) => `${p.llmType}\u0000${p.title}\u0000${p.content}`));
-    candidates = incoming.filter((p) => {
-      const key = `${p.llmType}\u0000${p.title}\u0000${p.content}`;
+    const existingKeys = new Set(state.prompts.map((prompt) => `${prompt.llmType}\u0000${prompt.title}\u0000${prompt.content}`));
+    candidates = incoming.filter((prompt) => {
+      const key = `${prompt.llmType}\u0000${prompt.title}\u0000${prompt.content}`;
       if (existingKeys.has(key)) return false;
       existingKeys.add(key);
       return true;
@@ -424,7 +413,7 @@ async function updateStorageSummary() {
   const usageMb = ((estimate.usage ?? 0) / 1024 / 1024).toFixed(2);
   const quotaMb = ((estimate.quota ?? 0) / 1024 / 1024).toFixed(0);
   const persisted = navigator.storage.persisted ? await navigator.storage.persisted() : false;
-  elements.storageSummary.textContent = `프롬프트 ${state.prompts.length}개 · 약 ${usageMb}MB / ${quotaMb}MB · 유지 설정 ${persisted ? "적용됨" : "미적용"}`;
+  elements.storageSummary.textContent = `프롬프트 ${state.prompts.length}개 · 이 사이트 데이터 약 ${usageMb}MB / 할당량 약 ${quotaMb}MB · 유지 설정 ${persisted ? "적용됨" : "미적용"}`;
 }
 
 function bindEvents() {
@@ -432,6 +421,7 @@ function bindEvents() {
   elements.addPromptButton.addEventListener("click", () => openEditor());
   [elements.searchInput, elements.llmFilter, elements.sortOrder, elements.favoritesOnly]
     .forEach((element) => element.addEventListener("input", renderPromptList));
+
   elements.promptList.addEventListener("click", (event) => {
     const card = event.target.closest("[data-prompt-id]");
     if (card) openDetail(card.dataset.promptId).catch(handleError);
@@ -446,6 +436,7 @@ function bindEvents() {
       tryCloseEditor();
     }
   });
+
   elements.closeDetailButton.addEventListener("click", () => elements.detailDialog.close());
   elements.copyPromptButton.addEventListener("click", async () => {
     const prompt = await getPrompt(state.activePromptId);
@@ -473,33 +464,6 @@ function bindEvents() {
     elements.detailDialog.close();
     await refreshPrompts();
     showSnackbar("프롬프트를 삭제했습니다.");
-  });
-
-  elements.transformButton.addEventListener("click", () => {
-    try {
-      elements.transformOutput.value = transformPrompt(
-        elements.transformInput.value,
-        elements.transformSource.value,
-        elements.transformTarget.value,
-      );
-      showSnackbar("프롬프트를 변환했습니다.");
-    } catch (error) {
-      handleError(error);
-    }
-  });
-  elements.copyTransformButton.addEventListener("click", () => copyTextExactly(elements.transformOutput.value));
-  elements.saveTransformButton.addEventListener("click", () => {
-    const result = elements.transformOutput.value;
-    if (!result.trim()) {
-      showSnackbar("저장할 변환 결과가 없습니다.");
-      return;
-    }
-    openEditor({
-      llmType: elements.transformTarget.value,
-      title: `${LLM_LABELS[elements.transformTarget.value]} 변환 프롬프트`,
-      content: result,
-      isFavorite: false,
-    });
   });
 
   elements.exportButton.addEventListener("click", () => exportBackup().catch(handleError));
@@ -570,7 +534,7 @@ async function init() {
   applyTheme(theme);
   bindEvents();
   const route = location.hash.slice(1);
-  navigate(["library", "transform", "settings"].includes(route) ? route : "library");
+  navigate(["library", "settings"].includes(route) ? route : "library");
   await refreshPrompts();
   await registerServiceWorker();
 }
