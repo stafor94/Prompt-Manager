@@ -76,7 +76,7 @@ h3 { margin-bottom: 10px; }
   left: 0;
   right: 0;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 4px;
   padding: 8px max(12px, env(safe-area-inset-left)) calc(8px + var(--safe-bottom)) max(12px, env(safe-area-inset-right));
   background: var(--surface-container);
@@ -98,8 +98,7 @@ h3 { margin-bottom: 10px; }
 }
 .settings-stack { display: grid; gap: 14px; }
 .form-card { display: grid; gap: 16px; }
-.two-column, .filter-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.filter-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); margin: 14px 0 18px; }
+.filter-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; margin: 14px 0 18px; }
 .filter-grid .checkbox-field { grid-column: 1 / -1; }
 
 label { display: grid; gap: 7px; color: var(--on-surface-variant); font-weight: 700; }
@@ -154,6 +153,7 @@ small { color: var(--on-surface-variant); font-weight: 500; }
 .llm-badge[data-llm="GEMINI"]::before { content: "G · "; }
 .llm-badge[data-llm="GROK"]::before { content: "X · "; }
 .llm-badge[data-llm="CHATGPT"]::before { content: "C · "; }
+.llm-badge[data-llm="CLAUDE"]::before { content: "A · "; }
 
 .empty-state { text-align: center; padding: 54px 18px; color: var(--on-surface-variant); }
 .empty-state strong { display: block; color: var(--on-surface); margin-bottom: 8px; }
@@ -210,7 +210,7 @@ small { color: var(--on-surface-variant); font-weight: 500; }
     top: 80px;
     width: fit-content;
     margin: 0 28px 10px;
-    grid-template-columns: repeat(3, auto);
+    grid-template-columns: repeat(2, auto);
     border: 0;
     border-radius: 999px;
     padding: 4px;
@@ -223,7 +223,6 @@ small { color: var(--on-surface-variant); font-weight: 500; }
 }
 
 @media (max-width: 520px) {
-  .two-column { grid-template-columns: 1fr; }
   .screen-heading { align-items: stretch; flex-direction: column; }
   .screen-heading .filled-button { width: 100%; }
   .dialog-actions.spread { align-items: stretch; }
