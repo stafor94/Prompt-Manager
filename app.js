@@ -708,11 +708,17 @@ event.preventDefault();
 tryCloseEditor();
 }
 });
-elements.addPromptImagesButton.addEventListener("click", () => elements.promptImageInput.click());
+elements.addPromptImagesButton.addEventListener("click", () => {
+if (typeof elements.promptImageInput.showPicker === "function") {
+elements.promptImageInput.showPicker();
+return;
+}
+elements.promptImageInput.click();
+});
 elements.promptImageInput.addEventListener("change", async () => {
-const files = elements.promptImageInput.files;
+const files = [...(elements.promptImageInput.files ?? [])];
 elements.promptImageInput.value = "";
-if (files?.length) await addSelectedImages(files).catch(handleError);
+if (files.length) await addSelectedImages(files).catch(handleError);
 });
 elements.editorImageList.addEventListener("click", (event) => {
 const button = event.target.closest("[data-remove-image-id]");
