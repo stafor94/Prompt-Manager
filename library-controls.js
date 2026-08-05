@@ -170,4 +170,13 @@ function initLibraryControls() {
   queueMicrotask(() => requestListRender(searchInput));
 }
 
-initLibraryControls();
+function scheduleLibraryControls() {
+  const run = () => setTimeout(initLibraryControls, 0);
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", run, { once: true });
+  } else {
+    run();
+  }
+}
+
+scheduleLibraryControls();
