@@ -9,18 +9,21 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="프롬프트 매니저">
   <title>Prompt Manager</title>
-  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="manifest" href="./manifest.webmanifest?v=0.2.6">
   <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="./icons/icon.svg">
-  <link rel="stylesheet" href="./styles.css">
-  <link rel="stylesheet" href="./fixes.css">
+  <link rel="stylesheet" href="./styles.css?v=0.2.6">
+  <link rel="stylesheet" href="./fixes.css?v=0.2.6">
 </head>
 <body>
   <div class="app-shell">
     <header class="top-app-bar">
       <div>
         <p class="eyebrow">Prompt Manager</p>
-        <h1>프롬프트 매니저</h1>
+        <div class="app-title-row">
+          <h1>프롬프트 매니저</h1>
+          <span class="app-version-badge" aria-label="앱 버전 0.2.6">v0.2.6</span>
+        </div>
       </div>
       <button id="installButton" class="icon-button hidden" type="button" aria-label="앱 설치" title="앱 설치">↓</button>
     </header>
@@ -126,7 +129,7 @@
           <section class="card" aria-labelledby="aboutHeading">
             <h3 id="aboutHeading">앱 정보</h3>
             <dl class="info-list">
-              <div><dt>버전</dt><dd>0.2.5</dd></div>
+              <div><dt>버전</dt><dd>v0.2.6</dd></div>
               <div><dt>지원 LLM</dt><dd>ChatGPT · Gemini · Grok · Claude</dd></div>
               <div><dt>네트워크 전송</dt><dd>없음</dd></div>
               <div><dt>데이터 위치</dt><dd>현재 기기 브라우저</dd></div>
@@ -161,10 +164,24 @@
           <input id="promptTitleInput" type="text" autocomplete="off" maxlength="50" required>
           <small id="titleCount">0 / 50자</small>
         </label>
-        <label>
-          <span>본문</span>
+        <div class="content-editor-field">
+          <div class="field-label-row">
+            <label for="promptContentInput">본문</label>
+            <div class="field-action-buttons" aria-label="본문 입력 도구">
+              <button id="clearPromptContentButton" class="field-icon-button" type="button" aria-label="본문 전체 지우기" title="본문 전체 지우기">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                  <path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13M10 11v5M14 11v5"></path>
+                </svg>
+              </button>
+              <button id="pastePromptContentButton" class="field-icon-button" type="button" aria-label="클립보드 내용 붙여넣기" title="클립보드 내용 붙여넣기">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                  <path d="M9 5h6M9 3h6v4H9zM8 5H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8M16 13v8M12 17h8"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
           <textarea id="promptContentInput" rows="10" required></textarea>
-        </label>
+        </div>
         <label class="checkbox-field">
           <input id="promptFavoriteInput" type="checkbox">
           <span>즐겨찾기</span>
@@ -206,8 +223,19 @@
   </dialog>
 
   <div id="snackbar" class="snackbar" role="status" aria-live="polite"></div>
-  <script type="module" src="./app.js"></script>
-  <script type="module" src="./llm-filter.js"></script>
-  <script type="module" src="./navigation.js"></script>
+  <script>
+    if ("serviceWorker" in navigator) {
+      let reloadingForUpdate = false;
+      navigator.serviceWorker.addEventListener("controllerchange", () => {
+        if (reloadingForUpdate) return;
+        reloadingForUpdate = true;
+        location.reload();
+      });
+    }
+  </script>
+  <script type="module" src="./app.js?v=0.2.6"></script>
+  <script type="module" src="./llm-filter.js?v=0.2.6"></script>
+  <script type="module" src="./editor-tools.js?v=0.2.6"></script>
+  <script type="module" src="./navigation.js?v=0.2.6"></script>
 </body>
 </html>
