@@ -9,7 +9,7 @@ const DB_NAME = "prompt-vault";
 const DB_VERSION = 1;
 const STORE_NAME = "prompts";
 const BACKUP_SCHEMA_VERSION = 1;
-const TITLE_MAX_LENGTH = 30;
+const TITLE_MAX_LENGTH = 50;
 const LLM_LABELS = {
   CHATGPT: "ChatGPT",
   GEMINI: "Gemini",
