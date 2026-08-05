@@ -63,3 +63,42 @@ main,
   overflow-wrap: anywhere;
   word-break: break-word;
 }
+
+.llm-badge {
+  gap: 6px;
+}
+
+.llm-badge::before {
+  content: "";
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  background-color: currentColor;
+  -webkit-mask-position: center;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-size: contain;
+  mask-position: center;
+  mask-repeat: no-repeat;
+  mask-size: contain;
+}
+
+.llm-badge[data-llm="CHATGPT"]::before {
+  -webkit-mask-image: url("./icons/llm-chatgpt.svg");
+  mask-image: url("./icons/llm-chatgpt.svg");
+}
+
+.llm-badge[data-llm="GEMINI"]::before {
+  -webkit-mask-image: url("./icons/llm-gemini.svg");
+  mask-image: url("./icons/llm-gemini.svg");
+}
+
+.llm-badge[data-llm="GROK"]::before {
+  -webkit-mask-image: url("./icons/llm-grok.svg");
+  mask-image: url("./icons/llm-grok.svg");
+}
+
+.llm-badge[data-llm="CLAUDE"]::before {
+  -webkit-mask-image: url("./icons/llm-claude.svg");
+  mask-image: url("./icons/llm-claude.svg");
+}
