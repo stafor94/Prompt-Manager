@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="프롬프트 보관함 아이콘">
+  <rect width="512" height="512" rx="112" fill="#6750a4"/>
+  <path d="M128 152c0-22 18-40 40-40h176c22 0 40 18 40 40v208c0 22-18 40-40 40H168c-22 0-40-18-40-40V152Z" fill="#eaddff"/>
+  <path d="M184 190h144M184 252h112M184 314h144" stroke="#4f378b" stroke-width="28" stroke-linecap="round"/>
+  <circle cx="336" cy="252" r="18" fill="#6750a4"/>
+</svg>
