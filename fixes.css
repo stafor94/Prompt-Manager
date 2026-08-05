@@ -232,6 +232,66 @@ main,
   margin-bottom: 8px;
 }
 
+.content-editor-field {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+}
+
+.field-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+  color: var(--on-surface-variant);
+  font-weight: 700;
+}
+
+.field-label-row > label {
+  display: block;
+  min-width: 0;
+  color: inherit;
+  font-weight: inherit;
+}
+
+.field-action-buttons {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 2px;
+}
+
+.field-icon-button {
+  display: inline-grid;
+  place-items: center;
+  width: 40px;
+  min-width: 40px;
+  height: 40px;
+  min-height: 40px;
+  padding: 0;
+  color: var(--primary);
+  background: transparent;
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.field-icon-button:hover,
+.field-icon-button:active {
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+}
+
+.field-icon-button svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 .prompt-card[hidden] {
   display: none !important;
 }
