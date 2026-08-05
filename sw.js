@@ -1,4 +1,4 @@
-const CACHE_NAME = "prompt-manager-shell-v10";
+const CACHE_NAME = "prompt-manager-shell-v11";
 const APP_SHELL = [
   "./",
   "./index.html",
