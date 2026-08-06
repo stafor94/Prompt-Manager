@@ -23,7 +23,10 @@ ChatGPT, Gemini, Grok, Claude용 프롬프트를 스마트폰 브라우저에 �
 
 ## 개발 문서
 
+- [변경 이력 및 릴리즈 노트](CHANGELOG.md)
 - [버전 관리 정책](VERSIONING.md)
+
+모든 앱 버전 증가는 `CHANGELOG.md`의 해당 버전 릴리즈 노트와 함께 반영합니다.
 
 ## 데이터 저장 위치
 
