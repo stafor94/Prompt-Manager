@@ -1,0 +1,31 @@
+name: Test
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  node-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check changed JavaScript
+        run: |
+          node --check update-manager.js
+          node --check version-display.js
+          node --check library-controls.js
+          node --check archive-six-columns.js
+          node --check release-notes.js
+          node --check sw.js
+      - name: Run tests
+        run: node --test
