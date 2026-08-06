@@ -1,40 +1,41 @@
-const CACHE_NAME = "prompt-manager-shell-v35";
+const CACHE_NAME = "prompt-manager-shell-v36";
 const APP_SHELL = [
   "./",
   "./index.html",
-  "./styles.css?v=1.1.2",
-  "./fixes.css?v=1.1.2",
-  "./detail-layout.css?v=1.1.2",
-  "./archive-grouping.css?v=1.1.2",
-  "./image-viewer-fit.css?v=1.1.2",
-  "./tag-ui-fixes.css?v=1.1.2",
-  "./app.js?v=1.1.2",
+  "./styles.css?v=1.1.3",
+  "./fixes.css?v=1.1.3",
+  "./detail-layout.css?v=1.1.3",
+  "./archive-grouping.css?v=1.1.3",
+  "./image-viewer-fit.css?v=1.1.3",
+  "./tag-ui-fixes.css?v=1.1.3",
+  "./app.js?v=1.1.3",
   "./prompt-version.mjs",
-  "./llm-filter.js?v=1.1.2",
-  "./editor-tools.js?v=1.1.2",
-  "./navigation.js?v=1.1.2",
-  "./ui-enhancements.js?v=1.1.2",
-  "./archive-llm-filter.js?v=1.1.2",
-  "./version-display.js?v=1.1.2",
-  "./library-controls.js?v=1.1.2",
-  "./library-controls.css?v=1.0.5",
-  "./archive-six-columns.js?v=1.1.2",
-  "./archive-six-columns.css?v=1.0.7",
-  "./image-navigation.js?v=1.1.2",
-  "./image-viewer-fit.js?v=1.1.2",
+  "./llm-filter.js?v=1.1.3",
+  "./editor-tools.js?v=1.1.3",
+  "./navigation.js?v=1.1.3",
+  "./ui-enhancements.js?v=1.1.3",
+  "./archive-llm-filter.js?v=1.1.3",
+  "./update-manager.js?v=1.1.3",
+  "./version-display.js?v=1.1.3",
+  "./library-controls.js?v=1.1.3",
+  "./library-controls.css?v=1.1.3",
+  "./archive-six-columns.js?v=1.1.3",
+  "./archive-six-columns.css?v=1.1.3",
+  "./image-navigation.js?v=1.1.3",
+  "./image-viewer-fit.js?v=1.1.3",
   "./image-viewer-fit-core.mjs",
-  "./tab-persistence.js?v=1.1.2",
-  "./storage-summary.js?v=1.1.2",
+  "./tab-persistence.js?v=1.1.3",
+  "./storage-summary.js?v=1.1.3",
   "./storage-quota.mjs",
-  "./release-notes.js?v=1.1.2",
+  "./release-notes.js?v=1.1.3",
   "./release-notes-core.mjs",
-  "./release-notes.css?v=1.1.2",
-  "./CHANGELOG.md?v=1.1.2",
-  "./prompt-organization-backup.js?v=1.1.2",
+  "./release-notes.css?v=1.1.3",
+  "./CHANGELOG.md?v=1.1.3",
+  "./prompt-organization-backup.js?v=1.1.3",
   "./prompt-organization-backup-core.mjs",
-  "./prompt-organization-backup.css?v=1.1.1",
+  "./prompt-organization-backup.css?v=1.1.3",
   "./prompt-tag-core.mjs",
-  "./manifest.webmanifest?v=1.1.2",
+  "./manifest.webmanifest?v=1.1.3",
   "./icons/icon.svg",
   "./icons/icon-maskable.svg",
   "./icons/llm-chatgpt.svg",
@@ -49,15 +50,25 @@ self.addEventListener("install", (event) => {
 });
 
 self.addEventListener("activate", (event) => {
-  event.waitUntil(
-    caches.keys()
-      .then((keys) => Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))))
-      .then(() => self.clients.claim())
-  );
+  event.waitUntil((async () => {
+    const keys = await caches.keys();
+    await Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key)));
+    await self.clients.claim();
+  })());
 });
 
+self.addEventListener("message", (event) => {
+  if (event.data?.type === "SKIP_WAITING") self.skipWaiting();
+});
+
+function createFreshNavigationRequest(request) {
+  const url = new URL(request.url);
+  url.searchParams.set("pm-shell", CACHE_NAME);
+  return new Request(url, request);
+}
+
 async function fetchAndCache(request, cacheKey = request) {
-  const response = await fetch(request, { cache: "no-cache" });
+  const response = await fetch(request, { cache: "no-store" });
   if (response.ok) {
     const cache = await caches.open(CACHE_NAME);
     await cache.put(cacheKey, response.clone());
@@ -72,7 +83,7 @@ self.addEventListener("fetch", (event) => {
 
   if (event.request.mode === "navigate") {
     event.respondWith(
-      fetchAndCache(event.request, "./index.html")
+      fetchAndCache(createFreshNavigationRequest(event.request), "./index.html")
         .catch(() => caches.match("./index.html"))
     );
     return;
