@@ -1,0 +1,651 @@
+import { getPromptVersion } from "./prompt-version.mjs";
+import {
+  COLLECTION_MAX_LENGTH,
+  MAX_TAGS,
+  TAG_MAX_LENGTH,
+  buildPromptDedupKey,
+  createBackupZip,
+  matchesOrganizationQuery,
+  normalizeCollection,
+  normalizeTags,
+  parseBackupZip,
+  parseLegacyJsonBackup,
+} from "./prompt-organization-backup-core.mjs";
+
+const APP_VERSION = "1.1.0";
+const DB_NAME = "prompt-vault";
+const DB_VERSION = 1;
+const STORE_NAME = "prompts";
+const COLLECTION_FILTER_KEY = "prompt-manager-collection-filter";
+const TAG_FILTER_KEY = "prompt-manager-tag-filter";
+const ACTIVE_LLM_STORAGE_KEY = "prompt-manager-active-llms";
+const LLM_TYPES = ["CHATGPT", "GEMINI", "GROK", "CLAUDE"];
+const LLM_LABELS = {
+  CHATGPT: "ChatGPT",
+  GEMINI: "Gemini",
+  GROK: "Grok",
+  CLAUDE: "Claude",
+};
+
+const state = {
+  selectedPromptId: null,
+  editorMode: "new",
+  editorTargetId: null,
+  editorSourceId: null,
+  editorTags: [],
+  editorSnapshot: "",
+  editorBaseUpdatedAt: null,
+  promptMutationOwned: false,
+  renderScheduled: false,
+  prompts: [],
+  selectedCollection: localStorage.getItem(COLLECTION_FILTER_KEY) ?? "",
+  selectedTag: localStorage.getItem(TAG_FILTER_KEY) ?? "",
+  snackbarTimer: null,
+};
+
+const elements = {
+  promptList: document.querySelector("#promptList"),
+  promptCount: document.querySelector("#promptCount"),
+  emptyState: document.querySelector("#emptyState"),
+  searchInput: document.querySelector("#searchInput"),
+  sortOrder: document.querySelector("#sortOrder"),
+  favoritesOnly: document.querySelector("#favoritesOnly"),
+  addPromptButton: document.querySelector("#addPromptButton"),
+  editorDialog: document.querySelector("#editorDialog"),
+  promptForm: document.querySelector("#promptForm"),
+  promptLlm: document.querySelector("#promptLlm"),
+  promptTitleInput: document.querySelector("#promptTitleInput"),
+  promptContentInput: document.querySelector("#promptContentInput"),
+  promptFavoriteInput: document.querySelector("#promptFavoriteInput"),
+  closeEditorButton: document.querySelector("#closeEditorButton"),
+  cancelEditorButton: document.querySelector("#cancelEditorButton"),
+  editPromptButton: document.querySelector("#editPromptButton"),
+  duplicatePromptButton: document.querySelector("#duplicatePromptButton"),
+  detailDates: document.querySelector("#detailDates"),
+  exportButton: document.querySelector("#exportButton"),
+  restoreButton: document.querySelector("#restoreButton"),
+  restoreMode: document.querySelector("#restoreMode"),
+  restoreFileInput: document.querySelector("#restoreFileInput"),
+  snackbar: document.querySelector("#snackbar"),
+};
+
+let dbPromise;
+
+function requestToPromise(request) {
+  return new Promise((resolve, reject) => {
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error ?? new Error("요청을 처리할 수 없습니다."));
+  });
+}
+
+function transactionDone(transaction) {
+  return new Promise((resolve, reject) => {
+    transaction.oncomplete = () => resolve();
+    transaction.onerror = () => reject(transaction.error ?? new Error("트랜잭션 오류"));
+    transaction.onabort = () => reject(transaction.error ?? new Error("트랜잭션 취소"));
+  });
+}
+
+function openDatabase() {
+  if (dbPromise) return dbPromise;
+  dbPromise = new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error ?? new Error("데이터베이스를 열 수 없습니다."));
+    request.onblocked = () => reject(new Error("다른 탭에서 데이터베이스가 사용 중입니다."));
+  });
+  return dbPromise;
+}
+
+async function getAllPrompts() {
+  const db = await openDatabase();
+  const transaction = db.transaction(STORE_NAME, "readonly");
+  return requestToPromise(transaction.objectStore(STORE_NAME).getAll());
+}
+
+async function getPrompt(id) {
+  if (!Number.isInteger(id)) return null;
+  const db = await openDatabase();
+  const transaction = db.transaction(STORE_NAME, "readonly");
+  return requestToPromise(transaction.objectStore(STORE_NAME).get(id));
+}
+
+async function putPrompt(prompt) {
+  const db = await openDatabase();
+  const transaction = db.transaction(STORE_NAME, "readwrite");
+  transaction.objectStore(STORE_NAME).put(prompt);
+  await transactionDone(transaction);
+}
+
+function showSnackbar(message) {
+  if (!elements.snackbar) return;
+  clearTimeout(state.snackbarTimer);
+  elements.snackbar.textContent = message;
+  elements.snackbar.classList.add("show");
+  state.snackbarTimer = setTimeout(() => elements.snackbar.classList.remove("show"), 2800);
+}
+
+function handleError(error) {
+  console.error(error instanceof Error ? error.message : "알 수 없는 오류");
+  showSnackbar(error instanceof Error ? error.message : "오류가 발생했습니다.");
+}
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function formatDate(timestamp) {
+  return new Intl.DateTimeFormat("ko-KR", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(timestamp));
+}
+
+function loadActiveLlmTypes() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(ACTIVE_LLM_STORAGE_KEY));
+    if (!Array.isArray(stored)) return new Set(LLM_TYPES);
+    return new Set(stored.filter((type) => LLM_TYPES.includes(type)));
+  } catch {
+    return new Set(LLM_TYPES);
+  }
+}
+
+function getImageCount(prompt) {
+  return Array.isArray(prompt.images) ? prompt.images.length : 0;
+}
+
+function organizationMarkup(prompt) {
+  const collection = normalizeCollection(prompt.collection);
+  const tags = normalizeTags(prompt.tags);
+  if (!collection && tags.length === 0) return "";
+  return `
+    <div class="prompt-organization-summary">
+      ${collection ? `<span class="collection-badge">${escapeHtml(collection)}</span>` : ""}
+      ${tags.map((tag) => `<span class="tag-badge">#${escapeHtml(tag)}</span>`).join("")}
+    </div>
+  `;
+}
+
+function getFilteredPrompts(prompts) {
+  const query = elements.searchInput?.value ?? "";
+  const activeLlmTypes = loadActiveLlmTypes();
+  const favoritesOnly = Boolean(elements.favoritesOnly?.checked);
+  const result = prompts.filter((prompt) => {
+    if (!activeLlmTypes.has(prompt.llmType)) return false;
+    if (favoritesOnly && !prompt.isFavorite) return false;
+    if (state.selectedCollection && normalizeCollection(prompt.collection) !== state.selectedCollection) return false;
+    if (state.selectedTag && !normalizeTags(prompt.tags).some((tag) => tag.toLocaleLowerCase("ko-KR") === state.selectedTag.toLocaleLowerCase("ko-KR"))) return false;
+    return matchesOrganizationQuery(prompt, query);
+  });
+
+  switch (elements.sortOrder?.value) {
+    case "CREATED_DESC":
+      result.sort((a, b) => b.createdAt - a.createdAt);
+      break;
+    case "TITLE_ASC":
+      result.sort((a, b) => a.title.localeCompare(b.title, "ko-KR", { sensitivity: "base" }));
+      break;
+    case "UPDATED_DESC":
+    default:
+      result.sort((a, b) => b.updatedAt - a.updatedAt);
+      break;
+  }
+  return result;
+}
+
+function renderPromptCards(prompts) {
+  if (!elements.promptList || !elements.promptCount || !elements.emptyState) return;
+  const filtered = getFilteredPrompts(prompts);
+  state.promptMutationOwned = true;
+  elements.promptList.innerHTML = filtered.map((prompt) => `
+    <button class="prompt-card" type="button" data-prompt-id="${prompt.id}">
+      <div class="prompt-card-header">
+        <span class="llm-badge" data-llm="${prompt.llmType}">${LLM_LABELS[prompt.llmType] ?? escapeHtml(prompt.llmType)}</span>
+        <span class="favorite-mark" aria-label="${prompt.isFavorite ? "즐겨찾기" : "일반"}">${prompt.isFavorite ? "★" : ""}</span>
+      </div>
+      <h3>${escapeHtml(prompt.title)}</h3>
+      <p class="prompt-preview">${escapeHtml(prompt.content)}</p>
+      ${organizationMarkup(prompt)}
+      <div class="prompt-meta">
+        <span class="prompt-version">v${getPromptVersion(prompt)}</span>
+        ${getImageCount(prompt) > 0 ? `<span>이미지 ${getImageCount(prompt)}장</span>` : ""}
+        <span>수정 ${formatDate(prompt.updatedAt)}</span>
+      </div>
+    </button>
+  `).join("");
+  elements.promptCount.textContent = `${filtered.length}개 표시 · 전체 ${prompts.length}개`;
+  elements.emptyState.classList.toggle("hidden", filtered.length > 0);
+}
+
+function collectOrganizationOptions(prompts) {
+  const collections = [...new Set(prompts.map((prompt) => normalizeCollection(prompt.collection)).filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b, "ko-KR", { sensitivity: "base" }));
+  const tagCounts = new Map();
+  prompts.forEach((prompt) => {
+    normalizeTags(prompt.tags).forEach((tag) => {
+      const key = tag.toLocaleLowerCase("ko-KR");
+      const current = tagCounts.get(key) ?? { label: tag, count: 0 };
+      current.count += 1;
+      tagCounts.set(key, current);
+    });
+  });
+  const tags = [...tagCounts.values()].sort((a, b) => b.count - a.count || a.label.localeCompare(b.label, "ko-KR"));
+  return { collections, tags };
+}
+
+function renderOrganizationFilters(prompts) {
+  const collectionSelect = document.querySelector("#collectionFilter");
+  const tagFilters = document.querySelector("#tagFilterButtons");
+  if (!collectionSelect || !tagFilters) return;
+  const { collections, tags } = collectOrganizationOptions(prompts);
+  if (state.selectedCollection && !collections.includes(state.selectedCollection)) {
+    state.selectedCollection = "";
+    localStorage.removeItem(COLLECTION_FILTER_KEY);
+  }
+  if (state.selectedTag && !tags.some((item) => item.label.toLocaleLowerCase("ko-KR") === state.selectedTag.toLocaleLowerCase("ko-KR"))) {
+    state.selectedTag = "";
+    localStorage.removeItem(TAG_FILTER_KEY);
+  }
+  collectionSelect.innerHTML = [
+    '<option value="">전체 컬렉션</option>',
+    ...collections.map((collection) => `<option value="${escapeHtml(collection)}">${escapeHtml(collection)}</option>`),
+  ].join("");
+  collectionSelect.value = state.selectedCollection;
+  tagFilters.innerHTML = [
+    `<button type="button" class="tag-filter-button${state.selectedTag ? "" : " active"}" data-tag-filter="" aria-pressed="${String(!state.selectedTag)}">전체</button>`,
+    ...tags.map(({ label, count }) => {
+      const active = label.toLocaleLowerCase("ko-KR") === state.selectedTag.toLocaleLowerCase("ko-KR");
+      return `<button type="button" class="tag-filter-button${active ? " active" : ""}" data-tag-filter="${escapeHtml(label)}" aria-pressed="${String(active)}">#${escapeHtml(label)} <small>${count}</small></button>`;
+    }),
+  ].join("");
+}
+
+async function renderLibrary() {
+  const prompts = await getAllPrompts();
+  state.prompts = prompts;
+  renderOrganizationFilters(prompts);
+  renderPromptCards(prompts);
+}
+
+function scheduleLibraryRender() {
+  if (state.renderScheduled) return;
+  state.renderScheduled = true;
+  queueMicrotask(() => {
+    state.renderScheduled = false;
+    renderLibrary().catch(handleError);
+  });
+}
+
+function injectOrganizationFilters() {
+  if (document.querySelector("#organizationFilters")) return;
+  const filterGrid = document.querySelector(".filter-grid");
+  if (!filterGrid) return;
+  const panel = document.createElement("section");
+  panel.id = "organizationFilters";
+  panel.className = "organization-filters";
+  panel.setAttribute("aria-label", "컬렉션 및 태그 필터");
+  panel.innerHTML = `
+    <label class="collection-filter-field">
+      <span>컬렉션</span>
+      <select id="collectionFilter"><option value="">전체 컬렉션</option></select>
+    </label>
+    <div class="tag-filter-field">
+      <span>태그</span>
+      <div id="tagFilterButtons" class="tag-filter-buttons" role="group" aria-label="태그 필터"></div>
+    </div>
+  `;
+  filterGrid.insertAdjacentElement("afterend", panel);
+  panel.querySelector("#collectionFilter").addEventListener("change", (event) => {
+    state.selectedCollection = event.target.value;
+    if (state.selectedCollection) localStorage.setItem(COLLECTION_FILTER_KEY, state.selectedCollection);
+    else localStorage.removeItem(COLLECTION_FILTER_KEY);
+    scheduleLibraryRender();
+  });
+  panel.querySelector("#tagFilterButtons").addEventListener("click", (event) => {
+    const button = event.target.closest("[data-tag-filter]");
+    if (!button) return;
+    state.selectedTag = button.dataset.tagFilter ?? "";
+    if (state.selectedTag) localStorage.setItem(TAG_FILTER_KEY, state.selectedTag);
+    else localStorage.removeItem(TAG_FILTER_KEY);
+    scheduleLibraryRender();
+  });
+}
+
+function injectEditorOrganization() {
+  if (document.querySelector("#promptOrganizationEditor")) return;
+  const imageSection = document.querySelector(".image-attachment-field");
+  if (!imageSection) return;
+  const section = document.createElement("section");
+  section.id = "promptOrganizationEditor";
+  section.className = "prompt-organization-editor";
+  section.innerHTML = `
+    <label>
+      <span>컬렉션</span>
+      <input id="promptCollectionInput" type="text" maxlength="${COLLECTION_MAX_LENGTH}" autocomplete="off" placeholder="예: 개발, 업무, 이미지 생성">
+      <small>프롬프트를 하나의 상위 분류로 묶습니다.</small>
+    </label>
+    <div class="tag-editor-field">
+      <label for="promptTagInput">태그</label>
+      <div id="promptTagChips" class="prompt-tag-chips" aria-live="polite"></div>
+      <input id="promptTagInput" type="text" maxlength="${TAG_MAX_LENGTH}" autocomplete="off" placeholder="태그 입력 후 Enter 또는 쉼표">
+      <small>최대 ${MAX_TAGS}개 · 태그는 검색과 필터에 포함됩니다.</small>
+    </div>
+  `;
+  imageSection.insertAdjacentElement("beforebegin", section);
+  const tagInput = section.querySelector("#promptTagInput");
+  tagInput.addEventListener("keydown", (event) => {
+    if (!["Enter", ","].includes(event.key)) return;
+    event.preventDefault();
+    addEditorTag(tagInput.value);
+    tagInput.value = "";
+  });
+  tagInput.addEventListener("blur", () => {
+    if (!tagInput.value.trim()) return;
+    addEditorTag(tagInput.value);
+    tagInput.value = "";
+  });
+  section.querySelector("#promptTagChips").addEventListener("click", (event) => {
+    const button = event.target.closest("[data-remove-tag]");
+    if (!button) return;
+    state.editorTags = state.editorTags.filter((tag) => tag.toLocaleLowerCase("ko-KR") !== button.dataset.removeTag.toLocaleLowerCase("ko-KR"));
+    renderEditorTags();
+  });
+}
+
+function renderEditorTags() {
+  const container = document.querySelector("#promptTagChips");
+  if (!container) return;
+  container.innerHTML = state.editorTags.map((tag) => `
+    <span class="editable-tag-chip">
+      #${escapeHtml(tag)}
+      <button type="button" data-remove-tag="${escapeHtml(tag)}" aria-label="${escapeHtml(tag)} 태그 제거">×</button>
+    </span>
+  `).join("");
+}
+
+function addEditorTag(value) {
+  const next = normalizeTags([...state.editorTags, value]);
+  if (next.length === state.editorTags.length && value.trim()) {
+    showSnackbar(state.editorTags.length >= MAX_TAGS ? `태그는 최대 ${MAX_TAGS}개까지 추가할 수 있습니다.` : "이미 추가된 태그입니다.");
+    return;
+  }
+  state.editorTags = next;
+  renderEditorTags();
+}
+
+function editorImageIds() {
+  return [...document.querySelectorAll("#editorImageList [data-image-id]")].map((item) => item.dataset.imageId);
+}
+
+function currentEditorSnapshot() {
+  return JSON.stringify({
+    llmType: elements.promptLlm?.value ?? "",
+    title: elements.promptTitleInput?.value ?? "",
+    content: elements.promptContentInput?.value ?? "",
+    isFavorite: Boolean(elements.promptFavoriteInput?.checked),
+    imageIds: editorImageIds(),
+    collection: normalizeCollection(document.querySelector("#promptCollectionInput")?.value ?? ""),
+    tags: normalizeTags(state.editorTags),
+  });
+}
+
+function editorIsDirty() {
+  return Boolean(elements.editorDialog?.open && state.editorSnapshot && state.editorSnapshot !== currentEditorSnapshot());
+}
+
+function closeEditorWithGuard(event) {
+  if (!elements.editorDialog?.open) return;
+  event?.preventDefault();
+  event?.stopImmediatePropagation();
+  if (editorIsDirty() && !confirm("저장되지 않은 변경 사항이 있습니다. 편집을 종료할까요?")) return;
+  state.editorSnapshot = "";
+  elements.editorDialog.close();
+}
+
+async function loadEditorOrganization({ mode, targetId = null, sourceId = null }) {
+  state.editorMode = mode;
+  state.editorTargetId = targetId;
+  state.editorSourceId = sourceId;
+  const prompt = await getPrompt(mode === "edit" ? targetId : sourceId);
+  const collectionInput = document.querySelector("#promptCollectionInput");
+  if (collectionInput) collectionInput.value = normalizeCollection(prompt?.collection);
+  state.editorTags = normalizeTags(prompt?.tags);
+  state.editorBaseUpdatedAt = mode === "edit" ? (prompt?.updatedAt ?? null) : null;
+  renderEditorTags();
+  setTimeout(() => {
+    state.editorSnapshot = currentEditorSnapshot();
+  }, 0);
+}
+
+async function persistSubmittedOrganization(submission) {
+  for (let attempt = 0; attempt < 30; attempt += 1) {
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    let candidate = null;
+    if (submission.targetId !== null) {
+      candidate = await getPrompt(submission.targetId);
+      if (!candidate || candidate.updatedAt === submission.baseUpdatedAt) continue;
+    } else {
+      const prompts = await getAllPrompts();
+      candidate = prompts
+        .filter((prompt) => Number(prompt.id) > submission.maxExistingId)
+        .filter((prompt) => prompt.llmType === submission.llmType && prompt.title === submission.title && prompt.content === submission.content)
+        .sort((a, b) => b.updatedAt - a.updatedAt || b.id - a.id)[0] ?? null;
+      if (!candidate) continue;
+    }
+    if (candidate.llmType !== submission.llmType || candidate.title !== submission.title || candidate.content !== submission.content) continue;
+    await putPrompt({
+      ...candidate,
+      collection: submission.collection,
+      tags: submission.tags,
+    });
+    await renderLibrary();
+    return;
+  }
+}
+
+function injectDetailOrganization() {
+  if (!elements.detailDates || document.querySelector("#detailOrganization")) return;
+  const container = document.createElement("div");
+  container.id = "detailOrganization";
+  container.className = "detail-organization";
+  container.hidden = true;
+  elements.detailDates.insertAdjacentElement("afterend", container);
+}
+
+async function renderDetailOrganization() {
+  const container = document.querySelector("#detailOrganization");
+  if (!container || !Number.isInteger(state.selectedPromptId)) return;
+  const prompt = await getPrompt(state.selectedPromptId);
+  if (!prompt) return;
+  const collection = normalizeCollection(prompt.collection);
+  const tags = normalizeTags(prompt.tags);
+  container.hidden = !collection && tags.length === 0;
+  container.innerHTML = `
+    ${collection ? `<span class="collection-badge">${escapeHtml(collection)}</span>` : ""}
+    ${tags.map((tag) => `<span class="tag-badge">#${escapeHtml(tag)}</span>`).join("")}
+  `;
+}
+
+function updateBackupUi() {
+  if (elements.exportButton) elements.exportButton.textContent = "ZIP 백업";
+  if (elements.restoreButton) elements.restoreButton.textContent = "ZIP·JSON 복원";
+  if (elements.restoreFileInput) elements.restoreFileInput.accept = "application/zip,.zip,application/json,.json";
+  const backupHeading = document.querySelector("#backupHeading");
+  const description = backupHeading?.parentElement?.querySelector(".supporting-text");
+  if (description) description.textContent = "프롬프트와 첨부 이미지를 하나의 ZIP 파일로 백업합니다. 기존 JSON 백업도 복원할 수 있습니다.";
+}
+
+function downloadBytes(bytes, filename, type) {
+  const blob = new Blob([bytes], { type });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.append(anchor);
+  anchor.click();
+  anchor.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+async function exportZipBackup() {
+  const prompts = await getAllPrompts();
+  const exportedAt = Date.now();
+  const zip = createBackupZip(prompts, { appVersion: APP_VERSION, exportedAt });
+  const stamp = new Date(exportedAt).toISOString().replaceAll(":", "-").replace(".000Z", "Z");
+  downloadBytes(zip, `prompt-manager-backup-${stamp}.zip`, "application/zip");
+  const imageCount = prompts.reduce((sum, prompt) => sum + getImageCount(prompt), 0);
+  showSnackbar(`프롬프트 ${prompts.length}개와 이미지 ${imageCount}장을 백업했습니다.`);
+}
+
+async function parseRestoreFile(file) {
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const isZip = bytes.length >= 4 && bytes[0] === 0x50 && bytes[1] === 0x4b;
+  if (isZip) return parseBackupZip(bytes).prompts;
+  let parsed;
+  try {
+    parsed = JSON.parse(new TextDecoder().decode(bytes));
+  } catch {
+    throw new Error("지원하는 ZIP 또는 JSON 백업 파일이 아닙니다.");
+  }
+  return parseLegacyJsonBackup(parsed);
+}
+
+async function restoreBackup(file) {
+  const incoming = await parseRestoreFile(file);
+  const existing = await getAllPrompts();
+  const mode = elements.restoreMode?.value ?? "DEDUPLICATE";
+  const existingKeys = new Set(existing.map(buildPromptDedupKey));
+  const dedupKeys = new Set(existingKeys);
+  const candidates = mode === "DEDUPLICATE"
+    ? incoming.filter((prompt) => {
+      const key = buildPromptDedupKey(prompt);
+      if (dedupKeys.has(key)) return false;
+      dedupKeys.add(key);
+      return true;
+    })
+    : incoming;
+  const duplicates = incoming.length - candidates.length;
+  const imageCount = incoming.reduce((sum, prompt) => sum + getImageCount(prompt), 0);
+  const message = mode === "REPLACE"
+    ? `기존 ${existing.length}개 데이터를 삭제하고 프롬프트 ${incoming.length}개와 이미지 ${imageCount}장으로 교체할까요?`
+    : `프롬프트 ${incoming.length}개와 이미지 ${imageCount}장을 확인했습니다.${mode === "DEDUPLICATE" ? ` 중복 ${duplicates}개를 제외하고 ${candidates.length}개를 추가합니다.` : ` 기존 데이터에 ${candidates.length}개를 추가합니다.`}\n복원을 진행할까요?`;
+  if (!confirm(message)) return;
+
+  const db = await openDatabase();
+  const transaction = db.transaction(STORE_NAME, "readwrite");
+  const store = transaction.objectStore(STORE_NAME);
+  if (mode === "REPLACE") store.clear();
+  candidates.forEach((prompt) => store.add(prompt));
+  await transactionDone(transaction);
+  await renderLibrary();
+  showSnackbar(`${candidates.length}개 프롬프트를 복원했습니다.`);
+  setTimeout(() => location.reload(), 700);
+}
+
+function bindEvents() {
+  elements.promptList?.addEventListener("click", (event) => {
+    const card = event.target.closest("[data-prompt-id]");
+    if (!card) return;
+    state.selectedPromptId = Number(card.dataset.promptId);
+    setTimeout(() => renderDetailOrganization().catch(handleError), 0);
+  }, true);
+
+  elements.addPromptButton?.addEventListener("click", () => {
+    setTimeout(() => loadEditorOrganization({ mode: "new" }).catch(handleError), 0);
+  }, true);
+
+  elements.editPromptButton?.addEventListener("click", () => {
+    const targetId = state.selectedPromptId;
+    setTimeout(() => loadEditorOrganization({ mode: "edit", targetId }).catch(handleError), 0);
+  }, true);
+
+  elements.duplicatePromptButton?.addEventListener("click", () => {
+    const sourceId = state.selectedPromptId;
+    setTimeout(() => loadEditorOrganization({ mode: "duplicate", sourceId }).catch(handleError), 0);
+  }, true);
+
+  elements.closeEditorButton?.addEventListener("click", closeEditorWithGuard, true);
+  elements.cancelEditorButton?.addEventListener("click", closeEditorWithGuard, true);
+  elements.editorDialog?.addEventListener("cancel", closeEditorWithGuard, true);
+
+  elements.promptForm?.addEventListener("submit", () => {
+    const submission = {
+      targetId: state.editorMode === "edit" ? state.editorTargetId : null,
+      baseUpdatedAt: state.editorBaseUpdatedAt,
+      maxExistingId: state.prompts.reduce((maximum, prompt) => Math.max(maximum, Number(prompt.id) || 0), 0),
+      llmType: elements.promptLlm?.value ?? "",
+      title: elements.promptTitleInput?.value ?? "",
+      content: elements.promptContentInput?.value ?? "",
+      collection: normalizeCollection(document.querySelector("#promptCollectionInput")?.value ?? ""),
+      tags: normalizeTags(state.editorTags),
+    };
+    state.editorSnapshot = currentEditorSnapshot();
+    persistSubmittedOrganization(submission).catch(handleError);
+  }, true);
+
+  window.addEventListener("beforeunload", (event) => {
+    if (!editorIsDirty()) return;
+    event.preventDefault();
+    event.returnValue = "";
+  }, true);
+
+  [elements.searchInput, elements.sortOrder, elements.favoritesOnly]
+    .filter(Boolean)
+    .forEach((element) => {
+      element.addEventListener("input", scheduleLibraryRender);
+      element.addEventListener("change", scheduleLibraryRender);
+    });
+
+  document.querySelectorAll("[data-llm-filter]").forEach((button) => {
+    button.addEventListener("click", () => setTimeout(scheduleLibraryRender, 0));
+  });
+
+  if (elements.promptList) {
+    new MutationObserver(() => {
+      if (state.promptMutationOwned) {
+        state.promptMutationOwned = false;
+        return;
+      }
+      scheduleLibraryRender();
+    }).observe(elements.promptList, { childList: true });
+  }
+
+  elements.exportButton?.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    exportZipBackup().catch(handleError);
+  }, true);
+
+  elements.restoreFileInput?.addEventListener("change", (event) => {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    const [file] = elements.restoreFileInput.files ?? [];
+    elements.restoreFileInput.value = "";
+    if (file) restoreBackup(file).catch(handleError);
+  }, true);
+}
+
+async function init() {
+  if (!elements.promptList || !elements.promptForm) return;
+  const style = document.createElement("link");
+  style.rel = "stylesheet";
+  style.href = `./prompt-organization-backup.css?v=${APP_VERSION}`;
+  document.head.append(style);
+  injectOrganizationFilters();
+  injectEditorOrganization();
+  injectDetailOrganization();
+  updateBackupUi();
+  bindEvents();
+  await renderLibrary();
+}
+
+init().catch(handleError);
