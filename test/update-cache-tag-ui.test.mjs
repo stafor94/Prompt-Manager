@@ -1,0 +1,48 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+
+const APP_VERSION = "1.1.3";
+
+async function read(path) {
+  return readFile(new URL(`../${path}`, import.meta.url), "utf8");
+}
+
+test("화면과 런타임 자산 버전이 v1.1.3으로 일치한다", async () => {
+  const [index, versionDisplay, releaseNotes] = await Promise.all([
+    read("index.html"),
+    read("version-display.js"),
+    read("release-notes.js"),
+  ]);
+
+  assert.match(index, new RegExp(`>v${APP_VERSION}<`));
+  assert.match(index, new RegExp(`update-manager\\.js\\?v=${APP_VERSION}`));
+  assert.doesNotMatch(index, /\?v=1\.1\.2/);
+  assert.match(versionDisplay, new RegExp(`APP_VERSION = "${APP_VERSION}"`));
+  assert.match(releaseNotes, new RegExp(`APP_VERSION = "${APP_VERSION}"`));
+});
+
+test("서비스 워커가 HTTP 캐시를 우회해 신규 앱 셸을 확인한다", async () => {
+  const [serviceWorker, updateManager] = await Promise.all([
+    read("sw.js"),
+    read("update-manager.js"),
+  ]);
+
+  assert.match(serviceWorker, /prompt-manager-shell-v36/);
+  assert.match(serviceWorker, /cache: "no-store"/);
+  assert.match(serviceWorker, /url\.searchParams\.set\("pm-shell", CACHE_NAME\)/);
+  assert.match(serviceWorker, /update-manager\.js\?v=1\.1\.3/);
+  assert.doesNotMatch(serviceWorker, /\?v=1\.1\.2|\?v=1\.0\.|\?v=1\.1\.1/);
+
+  assert.match(updateManager, /updateViaCache: "none"/);
+  assert.match(updateManager, /await registration\.update\(\)/);
+  assert.match(updateManager, /editorDialog\?\.open/);
+});
+
+test("태그 패널이 LLM 필터와 분리되는 상단 여백을 갖는다", async () => {
+  const css = await read("tag-ui-fixes.css");
+  assert.match(
+    css,
+    /#libraryScreen \.organization-filters\s*\{[^}]*margin-top:\s*16px;/s,
+  );
+});
