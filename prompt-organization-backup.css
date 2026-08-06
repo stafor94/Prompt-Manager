@@ -1,0 +1,143 @@
+.organization-filters {
+  display: grid;
+  grid-template-columns: minmax(150px, 220px) minmax(0, 1fr);
+  gap: 12px;
+  align-items: end;
+  margin: 0 0 16px;
+  padding: 14px;
+  border: 1px solid var(--outline-variant, #cac4d0);
+  border-radius: 16px;
+  background: var(--surface-container-low, rgba(103, 80, 164, 0.04));
+}
+
+.collection-filter-field,
+.tag-filter-field {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+}
+
+.collection-filter-field > span,
+.tag-filter-field > span {
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.tag-filter-buttons {
+  display: flex;
+  gap: 7px;
+  overflow-x: auto;
+  padding: 1px 1px 5px;
+  scrollbar-width: thin;
+}
+
+.tag-filter-button {
+  min-height: 40px;
+  flex: 0 0 auto;
+  padding: 8px 12px;
+  border: 1px solid var(--outline-variant, #cac4d0);
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.tag-filter-button.active {
+  border-color: var(--primary, #6750a4);
+  background: var(--secondary-container, #e8def8);
+  color: var(--on-secondary-container, #1d192b);
+  font-weight: 700;
+}
+
+.tag-filter-button small {
+  opacity: 0.65;
+}
+
+.prompt-organization-editor {
+  display: grid;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid var(--outline-variant, #cac4d0);
+  border-radius: 16px;
+}
+
+.prompt-organization-editor label,
+.tag-editor-field {
+  display: grid;
+  gap: 7px;
+}
+
+.prompt-tag-chips,
+.prompt-organization-summary,
+.detail-organization {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.prompt-tag-chips:empty {
+  display: none;
+}
+
+.editable-tag-chip,
+.collection-badge,
+.tag-badge {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  min-height: 28px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.collection-badge {
+  border: 1px solid var(--primary, #6750a4);
+  font-weight: 700;
+}
+
+.tag-badge,
+.editable-tag-chip {
+  background: var(--secondary-container, #e8def8);
+  color: var(--on-secondary-container, #1d192b);
+}
+
+.editable-tag-chip {
+  gap: 5px;
+  padding-right: 4px;
+}
+
+.editable-tag-chip button {
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.prompt-organization-summary {
+  margin-top: 2px;
+}
+
+.detail-organization {
+  margin: 8px 0 12px;
+}
+
+@media (max-width: 680px) {
+  .organization-filters {
+    grid-template-columns: 1fr;
+  }
+
+  .tag-filter-button {
+    min-height: 44px;
+  }
+}
