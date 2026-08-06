@@ -1,5 +1,5 @@
 (() => {
-  const APP_VERSION = "1.0.10";
+  const APP_VERSION = "1.0.11";
 
   function applyVersion() {
     document.querySelectorAll(".app-version-badge").forEach((badge) => {
@@ -44,5 +44,13 @@
 
   import(`./tab-persistence.js?v=${APP_VERSION}`).catch((error) => {
     console.error("마지막 탭 복원 기능을 불러오지 못했습니다.", error);
+  });
+
+  import(`./storage-summary.js?v=${APP_VERSION}`).catch((error) => {
+    console.error("저장소 할당량 표시 기능을 불러오지 못했습니다.", error);
+  });
+
+  import(`./release-notes.js?v=${APP_VERSION}`).catch((error) => {
+    console.error("릴리즈 노트 기능을 불러오지 못했습니다.", error);
   });
 })();
