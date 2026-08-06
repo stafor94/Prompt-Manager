@@ -1,5 +1,5 @@
 (() => {
-  const APP_VERSION = "1.0.11";
+  const APP_VERSION = "1.1.0";
 
   function applyVersion() {
     document.querySelectorAll(".app-version-badge").forEach((badge) => {
@@ -52,5 +52,9 @@
 
   import(`./release-notes.js?v=${APP_VERSION}`).catch((error) => {
     console.error("릴리즈 노트 기능을 불러오지 못했습니다.", error);
+  });
+
+  import(`./prompt-organization-backup.js?v=${APP_VERSION}`).catch((error) => {
+    console.error("컬렉션·태그 및 통합 백업 기능을 불러오지 못했습니다.", error);
   });
 })();
