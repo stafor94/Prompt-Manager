@@ -1,5 +1,5 @@
 (() => {
-  const APP_VERSION = "1.1.0";
+  const APP_VERSION = "1.1.1";
 
   function applyVersion() {
     document.querySelectorAll(".app-version-badge").forEach((badge) => {
@@ -38,9 +38,11 @@
     console.error("보관함 6열 UI를 불러오지 못했습니다.", error);
   });
 
-  import(`./image-navigation.js?v=${APP_VERSION}`).catch((error) => {
-    console.error("이미지 탐색 기능을 불러오지 못했습니다.", error);
-  });
+  import(`./image-navigation.js?v=${APP_VERSION}`)
+    .then(() => import(`./image-viewer-fit.js?v=${APP_VERSION}`))
+    .catch((error) => {
+      console.error("이미지 탐색 또는 화면 맞춤 기능을 불러오지 못했습니다.", error);
+    });
 
   import(`./tab-persistence.js?v=${APP_VERSION}`).catch((error) => {
     console.error("마지막 탭 복원 기능을 불러오지 못했습니다.", error);
@@ -55,6 +57,6 @@
   });
 
   import(`./prompt-organization-backup.js?v=${APP_VERSION}`).catch((error) => {
-    console.error("컬렉션·태그 및 통합 백업 기능을 불러오지 못했습니다.", error);
+    console.error("태그 및 통합 백업 기능을 불러오지 못했습니다.", error);
   });
 })();
