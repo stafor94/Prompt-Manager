@@ -1,18 +1,14 @@
 import { parseReleaseNotes } from "./release-notes-core.mjs";
 
-const APP_VERSION = "1.1.1";
+const APP_VERSION = "1.1.2";
 const CHANGELOG_URL = `./CHANGELOG.md?v=${APP_VERSION}`;
 const FALLBACK_CHANGELOG = `
-## [1.1.1] - 2026-08-06
-
-### 변경
-
-- 프롬프트 분류에서 컬렉션을 제거하고 태그만 유지했습니다.
-- 이미지 상세보기에서 화면 방향과 비율이 달라도 원본 전체가 보이도록 맞춤 방식을 보강했습니다.
+## [1.1.2] - 2026-08-06
 
 ### 수정
 
-- 화면 회전이나 모바일 브라우저 표시 영역 변경 후 확대·이동 상태가 남아 이미지가 잘리는 문제를 수정했습니다.
+- 상세 화면의 태그가 본문과 겹치지 않도록 날짜, 태그, 본문, 첨부 이미지 영역을 독립된 행으로 분리했습니다.
+- 등록·수정 화면의 태그 칩 높이와 삭제 버튼 간격을 줄여 더 조밀하게 표시하도록 했습니다.
 `;
 
 function ensureStylesheet() {
