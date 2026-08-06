@@ -1,4 +1,4 @@
-const CACHE_NAME = "prompt-manager-shell-v30";
+const CACHE_NAME = "prompt-manager-shell-v31";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -14,12 +14,18 @@ const APP_SHELL = [
   "./ui-enhancements.js?v=1.0.4",
   "./archive-llm-filter.js?v=1.0.4",
   "./version-display.js?v=1.0.4",
-  "./library-controls.js?v=1.0.10",
+  "./library-controls.js?v=1.0.11",
   "./library-controls.css?v=1.0.5",
-  "./archive-six-columns.js?v=1.0.10",
+  "./archive-six-columns.js?v=1.0.11",
   "./archive-six-columns.css?v=1.0.7",
-  "./image-navigation.js?v=1.0.10",
-  "./tab-persistence.js?v=1.0.10",
+  "./image-navigation.js?v=1.0.11",
+  "./tab-persistence.js?v=1.0.11",
+  "./storage-summary.js?v=1.0.11",
+  "./storage-quota.mjs",
+  "./release-notes.js?v=1.0.11",
+  "./release-notes-core.mjs",
+  "./release-notes.css?v=1.0.11",
+  "./CHANGELOG.md?v=1.0.11",
   "./manifest.webmanifest?v=1.0.4",
   "./icons/icon.svg",
   "./icons/icon-maskable.svg",
