@@ -1,6 +1,6 @@
 .organization-filters {
   display: grid;
-  grid-template-columns: minmax(150px, 220px) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 12px;
   align-items: end;
   margin: 0 0 16px;
@@ -10,14 +10,12 @@
   background: var(--surface-container-low, rgba(103, 80, 164, 0.04));
 }
 
-.collection-filter-field,
 .tag-filter-field {
   display: grid;
   gap: 7px;
   min-width: 0;
 }
 
-.collection-filter-field > span,
 .tag-filter-field > span {
   font-size: 0.82rem;
   font-weight: 700;
@@ -82,7 +80,6 @@
 }
 
 .editable-tag-chip,
-.collection-badge,
 .tag-badge {
   display: inline-flex;
   align-items: center;
@@ -95,15 +92,6 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.collection-badge {
-  border: 1px solid var(--primary, #6750a4);
-  font-weight: 700;
-}
-
-.tag-badge,
-.editable-tag-chip {
   background: var(--secondary-container, #e8def8);
   color: var(--on-secondary-container, #1d192b);
 }
@@ -133,10 +121,6 @@
 }
 
 @media (max-width: 680px) {
-  .organization-filters {
-    grid-template-columns: 1fr;
-  }
-
   .tag-filter-button {
     min-height: 44px;
   }
