@@ -1,0 +1,34 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import {
+  buildViewerCaption,
+  getSwipeDirection,
+  resolveAdjacentIndex,
+} from "../image-navigation.js";
+
+test("가로 스와이프 방향을 판정한다", () => {
+  assert.equal(getSwipeDirection(200, 100, 100, 110), 1);
+  assert.equal(getSwipeDirection(100, 100, 200, 90), -1);
+});
+
+test("짧거나 세로 중심 제스처는 스와이프로 처리하지 않는다", () => {
+  assert.equal(getSwipeDirection(100, 100, 70, 102), 0);
+  assert.equal(getSwipeDirection(100, 100, 30, 190), 0);
+});
+
+test("이전과 다음 인덱스는 배열 경계를 넘지 않는다", () => {
+  assert.equal(resolveAdjacentIndex(1, 3, 1), 2);
+  assert.equal(resolveAdjacentIndex(2, 3, 1), 2);
+  assert.equal(resolveAdjacentIndex(0, 3, -1), 0);
+});
+
+test("뷰어 캡션은 현재 범위 기준 순번을 사용한다", () => {
+  assert.equal(
+    buildViewerCaption({ promptTitle: "테스트", imageName: "사진.png" }, 1, 3),
+    "2 / 3 · 테스트 · 사진.png",
+  );
+  assert.equal(
+    buildViewerCaption({ promptTitle: "", imageName: "사진.png" }, 0, 2),
+    "1 / 2 · 사진.png",
+  );
+});
