@@ -1,18 +1,18 @@
 import { parseReleaseNotes } from "./release-notes-core.mjs";
 
-const APP_VERSION = "1.1.0";
+const APP_VERSION = "1.1.1";
 const CHANGELOG_URL = `./CHANGELOG.md?v=${APP_VERSION}`;
 const FALLBACK_CHANGELOG = `
-## [1.1.0] - 2026-08-06
-
-### 추가
-
-- 프롬프트 컬렉션과 태그 분류 기능을 추가했습니다.
-- 첨부 이미지를 포함한 ZIP 통합 백업 및 복원을 추가했습니다.
+## [1.1.1] - 2026-08-06
 
 ### 변경
 
-- 기존 JSON 백업 복원 호환성을 유지하면서 기본 백업 형식을 ZIP으로 변경했습니다.
+- 프롬프트 분류에서 컬렉션을 제거하고 태그만 유지했습니다.
+- 이미지 상세보기에서 화면 방향과 비율이 달라도 원본 전체가 보이도록 맞춤 방식을 보강했습니다.
+
+### 수정
+
+- 화면 회전이나 모바일 브라우저 표시 영역 변경 후 확대·이동 상태가 남아 이미지가 잘리는 문제를 수정했습니다.
 `;
 
 function ensureStylesheet() {
