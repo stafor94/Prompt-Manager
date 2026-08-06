@@ -1,4 +1,5 @@
 /* v1.1.3: tag layout spacing and compact editor chips */
+@import url("./prompt-organization-backup.css?v=1.1.3");
 
 #libraryScreen .organization-filters {
   margin-top: 16px;
