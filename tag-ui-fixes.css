@@ -1,4 +1,8 @@
-/* v1.1.2: detail tag layout and compact editor chips */
+/* v1.1.3: tag layout spacing and compact editor chips */
+
+#libraryScreen .organization-filters {
+  margin-top: 16px;
+}
 
 #detailDialog .dialog-content {
   grid-template-rows: auto auto minmax(0, 1fr) auto;
