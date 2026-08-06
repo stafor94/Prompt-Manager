@@ -1,22 +1,19 @@
 import { getPromptVersion } from "./prompt-version.mjs";
 import {
-  COLLECTION_MAX_LENGTH,
   MAX_TAGS,
   TAG_MAX_LENGTH,
   buildPromptDedupKey,
   createBackupZip,
-  matchesOrganizationQuery,
-  normalizeCollection,
   normalizeTags,
   parseBackupZip,
   parseLegacyJsonBackup,
 } from "./prompt-organization-backup-core.mjs";
+import { collectTagOptions, matchesPromptQuery } from "./prompt-tag-core.mjs";
 
-const APP_VERSION = "1.1.0";
+const APP_VERSION = "1.1.1";
 const DB_NAME = "prompt-vault";
 const DB_VERSION = 1;
 const STORE_NAME = "prompts";
-const COLLECTION_FILTER_KEY = "prompt-manager-collection-filter";
 const TAG_FILTER_KEY = "prompt-manager-tag-filter";
 const ACTIVE_LLM_STORAGE_KEY = "prompt-manager-active-llms";
 const LLM_TYPES = ["CHATGPT", "GEMINI", "GROK", "CLAUDE"];
@@ -38,7 +35,6 @@ const state = {
   promptMutationOwned: false,
   renderScheduled: false,
   prompts: [],
-  selectedCollection: localStorage.getItem(COLLECTION_FILTER_KEY) ?? "",
   selectedTag: localStorage.getItem(TAG_FILTER_KEY) ?? "",
   snackbarTimer: null,
 };
@@ -163,13 +159,11 @@ function getImageCount(prompt) {
   return Array.isArray(prompt.images) ? prompt.images.length : 0;
 }
 
-function organizationMarkup(prompt) {
-  const collection = normalizeCollection(prompt.collection);
+function tagMarkup(prompt) {
   const tags = normalizeTags(prompt.tags);
-  if (!collection && tags.length === 0) return "";
+  if (tags.length === 0) return "";
   return `
     <div class="prompt-organization-summary">
-      ${collection ? `<span class="collection-badge">${escapeHtml(collection)}</span>` : ""}
       ${tags.map((tag) => `<span class="tag-badge">#${escapeHtml(tag)}</span>`).join("")}
     </div>
   `;
@@ -180,11 +174,11 @@ function getFilteredPrompts(prompts) {
   const activeLlmTypes = loadActiveLlmTypes();
   const favoritesOnly = Boolean(elements.favoritesOnly?.checked);
   const result = prompts.filter((prompt) => {
+    const tags = normalizeTags(prompt.tags);
     if (!activeLlmTypes.has(prompt.llmType)) return false;
     if (favoritesOnly && !prompt.isFavorite) return false;
-    if (state.selectedCollection && normalizeCollection(prompt.collection) !== state.selectedCollection) return false;
-    if (state.selectedTag && !normalizeTags(prompt.tags).some((tag) => tag.toLocaleLowerCase("ko-KR") === state.selectedTag.toLocaleLowerCase("ko-KR"))) return false;
-    return matchesOrganizationQuery(prompt, query);
+    if (state.selectedTag && !tags.some((tag) => tag.toLocaleLowerCase("ko-KR") === state.selectedTag.toLocaleLowerCase("ko-KR"))) return false;
+    return matchesPromptQuery(prompt, query, tags);
   });
 
   switch (elements.sortOrder?.value) {
@@ -214,7 +208,7 @@ function renderPromptCards(prompts) {
       </div>
       <h3>${escapeHtml(prompt.title)}</h3>
       <p class="prompt-preview">${escapeHtml(prompt.content)}</p>
-      ${organizationMarkup(prompt)}
+      ${tagMarkup(prompt)}
       <div class="prompt-meta">
         <span class="prompt-version">v${getPromptVersion(prompt)}</span>
         ${getImageCount(prompt) > 0 ? `<span>이미지 ${getImageCount(prompt)}장</span>` : ""}
@@ -226,40 +220,16 @@ function renderPromptCards(prompts) {
   elements.emptyState.classList.toggle("hidden", filtered.length > 0);
 }
 
-function collectOrganizationOptions(prompts) {
-  const collections = [...new Set(prompts.map((prompt) => normalizeCollection(prompt.collection)).filter(Boolean))]
-    .sort((a, b) => a.localeCompare(b, "ko-KR", { sensitivity: "base" }));
-  const tagCounts = new Map();
-  prompts.forEach((prompt) => {
-    normalizeTags(prompt.tags).forEach((tag) => {
-      const key = tag.toLocaleLowerCase("ko-KR");
-      const current = tagCounts.get(key) ?? { label: tag, count: 0 };
-      current.count += 1;
-      tagCounts.set(key, current);
-    });
-  });
-  const tags = [...tagCounts.values()].sort((a, b) => b.count - a.count || a.label.localeCompare(b.label, "ko-KR"));
-  return { collections, tags };
-}
-
-function renderOrganizationFilters(prompts) {
-  const collectionSelect = document.querySelector("#collectionFilter");
+function renderTagFilters(prompts) {
   const tagFilters = document.querySelector("#tagFilterButtons");
-  if (!collectionSelect || !tagFilters) return;
-  const { collections, tags } = collectOrganizationOptions(prompts);
-  if (state.selectedCollection && !collections.includes(state.selectedCollection)) {
-    state.selectedCollection = "";
-    localStorage.removeItem(COLLECTION_FILTER_KEY);
-  }
+  if (!tagFilters) return;
+
+  const tags = collectTagOptions(prompts, (prompt) => normalizeTags(prompt.tags));
   if (state.selectedTag && !tags.some((item) => item.label.toLocaleLowerCase("ko-KR") === state.selectedTag.toLocaleLowerCase("ko-KR"))) {
     state.selectedTag = "";
     localStorage.removeItem(TAG_FILTER_KEY);
   }
-  collectionSelect.innerHTML = [
-    '<option value="">전체 컬렉션</option>',
-    ...collections.map((collection) => `<option value="${escapeHtml(collection)}">${escapeHtml(collection)}</option>`),
-  ].join("");
-  collectionSelect.value = state.selectedCollection;
+
   tagFilters.innerHTML = [
     `<button type="button" class="tag-filter-button${state.selectedTag ? "" : " active"}" data-tag-filter="" aria-pressed="${String(!state.selectedTag)}">전체</button>`,
     ...tags.map(({ label, count }) => {
@@ -272,7 +242,7 @@ function renderOrganizationFilters(prompts) {
 async function renderLibrary() {
   const prompts = await getAllPrompts();
   state.prompts = prompts;
-  renderOrganizationFilters(prompts);
+  renderTagFilters(prompts);
   renderPromptCards(prompts);
 }
 
@@ -285,31 +255,23 @@ function scheduleLibraryRender() {
   });
 }
 
-function injectOrganizationFilters() {
+function injectTagFilters() {
   if (document.querySelector("#organizationFilters")) return;
   const filterGrid = document.querySelector(".filter-grid");
   if (!filterGrid) return;
+
   const panel = document.createElement("section");
   panel.id = "organizationFilters";
   panel.className = "organization-filters";
-  panel.setAttribute("aria-label", "컬렉션 및 태그 필터");
+  panel.setAttribute("aria-label", "태그 필터");
   panel.innerHTML = `
-    <label class="collection-filter-field">
-      <span>컬렉션</span>
-      <select id="collectionFilter"><option value="">전체 컬렉션</option></select>
-    </label>
     <div class="tag-filter-field">
       <span>태그</span>
       <div id="tagFilterButtons" class="tag-filter-buttons" role="group" aria-label="태그 필터"></div>
     </div>
   `;
   filterGrid.insertAdjacentElement("afterend", panel);
-  panel.querySelector("#collectionFilter").addEventListener("change", (event) => {
-    state.selectedCollection = event.target.value;
-    if (state.selectedCollection) localStorage.setItem(COLLECTION_FILTER_KEY, state.selectedCollection);
-    else localStorage.removeItem(COLLECTION_FILTER_KEY);
-    scheduleLibraryRender();
-  });
+
   panel.querySelector("#tagFilterButtons").addEventListener("click", (event) => {
     const button = event.target.closest("[data-tag-filter]");
     if (!button) return;
@@ -320,19 +282,15 @@ function injectOrganizationFilters() {
   });
 }
 
-function injectEditorOrganization() {
+function injectEditorTags() {
   if (document.querySelector("#promptOrganizationEditor")) return;
   const imageSection = document.querySelector(".image-attachment-field");
   if (!imageSection) return;
+
   const section = document.createElement("section");
   section.id = "promptOrganizationEditor";
   section.className = "prompt-organization-editor";
   section.innerHTML = `
-    <label>
-      <span>컬렉션</span>
-      <input id="promptCollectionInput" type="text" maxlength="${COLLECTION_MAX_LENGTH}" autocomplete="off" placeholder="예: 개발, 업무, 이미지 생성">
-      <small>프롬프트를 하나의 상위 분류로 묶습니다.</small>
-    </label>
     <div class="tag-editor-field">
       <label for="promptTagInput">태그</label>
       <div id="promptTagChips" class="prompt-tag-chips" aria-live="polite"></div>
@@ -341,6 +299,7 @@ function injectEditorOrganization() {
     </div>
   `;
   imageSection.insertAdjacentElement("beforebegin", section);
+
   const tagInput = section.querySelector("#promptTagInput");
   tagInput.addEventListener("keydown", (event) => {
     if (!["Enter", ","].includes(event.key)) return;
@@ -393,7 +352,6 @@ function currentEditorSnapshot() {
     content: elements.promptContentInput?.value ?? "",
     isFavorite: Boolean(elements.promptFavoriteInput?.checked),
     imageIds: editorImageIds(),
-    collection: normalizeCollection(document.querySelector("#promptCollectionInput")?.value ?? ""),
     tags: normalizeTags(state.editorTags),
   });
 }
@@ -411,13 +369,11 @@ function closeEditorWithGuard(event) {
   elements.editorDialog.close();
 }
 
-async function loadEditorOrganization({ mode, targetId = null, sourceId = null }) {
+async function loadEditorTags({ mode, targetId = null, sourceId = null }) {
   state.editorMode = mode;
   state.editorTargetId = targetId;
   state.editorSourceId = sourceId;
   const prompt = await getPrompt(mode === "edit" ? targetId : sourceId);
-  const collectionInput = document.querySelector("#promptCollectionInput");
-  if (collectionInput) collectionInput.value = normalizeCollection(prompt?.collection);
   state.editorTags = normalizeTags(prompt?.tags);
   state.editorBaseUpdatedAt = mode === "edit" ? (prompt?.updatedAt ?? null) : null;
   renderEditorTags();
@@ -426,10 +382,11 @@ async function loadEditorOrganization({ mode, targetId = null, sourceId = null }
   }, 0);
 }
 
-async function persistSubmittedOrganization(submission) {
+async function persistSubmittedTags(submission) {
   for (let attempt = 0; attempt < 30; attempt += 1) {
     await new Promise((resolve) => setTimeout(resolve, 50));
     let candidate = null;
+
     if (submission.targetId !== null) {
       candidate = await getPrompt(submission.targetId);
       if (!candidate || candidate.updatedAt === submission.baseUpdatedAt) continue;
@@ -441,10 +398,10 @@ async function persistSubmittedOrganization(submission) {
         .sort((a, b) => b.updatedAt - a.updatedAt || b.id - a.id)[0] ?? null;
       if (!candidate) continue;
     }
+
     if (candidate.llmType !== submission.llmType || candidate.title !== submission.title || candidate.content !== submission.content) continue;
     await putPrompt({
       ...candidate,
-      collection: submission.collection,
       tags: submission.tags,
     });
     await renderLibrary();
@@ -452,7 +409,7 @@ async function persistSubmittedOrganization(submission) {
   }
 }
 
-function injectDetailOrganization() {
+function injectDetailTags() {
   if (!elements.detailDates || document.querySelector("#detailOrganization")) return;
   const container = document.createElement("div");
   container.id = "detailOrganization";
@@ -461,18 +418,14 @@ function injectDetailOrganization() {
   elements.detailDates.insertAdjacentElement("afterend", container);
 }
 
-async function renderDetailOrganization() {
+async function renderDetailTags() {
   const container = document.querySelector("#detailOrganization");
   if (!container || !Number.isInteger(state.selectedPromptId)) return;
   const prompt = await getPrompt(state.selectedPromptId);
   if (!prompt) return;
-  const collection = normalizeCollection(prompt.collection);
   const tags = normalizeTags(prompt.tags);
-  container.hidden = !collection && tags.length === 0;
-  container.innerHTML = `
-    ${collection ? `<span class="collection-badge">${escapeHtml(collection)}</span>` : ""}
-    ${tags.map((tag) => `<span class="tag-badge">#${escapeHtml(tag)}</span>`).join("")}
-  `;
+  container.hidden = tags.length === 0;
+  container.innerHTML = tags.map((tag) => `<span class="tag-badge">#${escapeHtml(tag)}</span>`).join("");
 }
 
 function updateBackupUi() {
@@ -556,21 +509,21 @@ function bindEvents() {
     const card = event.target.closest("[data-prompt-id]");
     if (!card) return;
     state.selectedPromptId = Number(card.dataset.promptId);
-    setTimeout(() => renderDetailOrganization().catch(handleError), 0);
+    setTimeout(() => renderDetailTags().catch(handleError), 0);
   }, true);
 
   elements.addPromptButton?.addEventListener("click", () => {
-    setTimeout(() => loadEditorOrganization({ mode: "new" }).catch(handleError), 0);
+    setTimeout(() => loadEditorTags({ mode: "new" }).catch(handleError), 0);
   }, true);
 
   elements.editPromptButton?.addEventListener("click", () => {
     const targetId = state.selectedPromptId;
-    setTimeout(() => loadEditorOrganization({ mode: "edit", targetId }).catch(handleError), 0);
+    setTimeout(() => loadEditorTags({ mode: "edit", targetId }).catch(handleError), 0);
   }, true);
 
   elements.duplicatePromptButton?.addEventListener("click", () => {
     const sourceId = state.selectedPromptId;
-    setTimeout(() => loadEditorOrganization({ mode: "duplicate", sourceId }).catch(handleError), 0);
+    setTimeout(() => loadEditorTags({ mode: "duplicate", sourceId }).catch(handleError), 0);
   }, true);
 
   elements.closeEditorButton?.addEventListener("click", closeEditorWithGuard, true);
@@ -585,11 +538,10 @@ function bindEvents() {
       llmType: elements.promptLlm?.value ?? "",
       title: elements.promptTitleInput?.value ?? "",
       content: elements.promptContentInput?.value ?? "",
-      collection: normalizeCollection(document.querySelector("#promptCollectionInput")?.value ?? ""),
       tags: normalizeTags(state.editorTags),
     };
     state.editorSnapshot = currentEditorSnapshot();
-    persistSubmittedOrganization(submission).catch(handleError);
+    persistSubmittedTags(submission).catch(handleError);
   }, true);
 
   window.addEventListener("beforeunload", (event) => {
@@ -636,13 +588,16 @@ function bindEvents() {
 
 async function init() {
   if (!elements.promptList || !elements.promptForm) return;
+  localStorage.removeItem("prompt-manager-collection-filter");
+
   const style = document.createElement("link");
   style.rel = "stylesheet";
   style.href = `./prompt-organization-backup.css?v=${APP_VERSION}`;
   document.head.append(style);
-  injectOrganizationFilters();
-  injectEditorOrganization();
-  injectDetailOrganization();
+
+  injectTagFilters();
+  injectEditorTags();
+  injectDetailTags();
   updateBackupUi();
   bindEvents();
   await renderLibrary();
