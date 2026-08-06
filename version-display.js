@@ -1,5 +1,5 @@
 (() => {
-  const APP_VERSION = "1.0.9";
+  const APP_VERSION = "1.0.10";
 
   function applyVersion() {
     document.querySelectorAll(".app-version-badge").forEach((badge) => {
@@ -40,5 +40,9 @@
 
   import(`./image-navigation.js?v=${APP_VERSION}`).catch((error) => {
     console.error("이미지 탐색 기능을 불러오지 못했습니다.", error);
+  });
+
+  import(`./tab-persistence.js?v=${APP_VERSION}`).catch((error) => {
+    console.error("마지막 탭 복원 기능을 불러오지 못했습니다.", error);
   });
 })();
