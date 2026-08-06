@@ -44,8 +44,19 @@ const APP_SHELL = [
   "./icons/llm-claude.svg"
 ];
 
+async function cacheAppShell() {
+  const cache = await caches.open(CACHE_NAME);
+  await Promise.all(APP_SHELL.map(async (asset) => {
+    const url = new URL(asset, self.registration.scope);
+    url.searchParams.set("pm-shell", CACHE_NAME);
+    const response = await fetch(url, { cache: "no-store" });
+    if (!response.ok) throw new Error(`앱 셸 캐시 실패: ${asset}`);
+    await cache.put(asset, response);
+  }));
+}
+
 self.addEventListener("install", (event) => {
-  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)));
+  event.waitUntil(cacheAppShell());
   self.skipWaiting();
 });
 
