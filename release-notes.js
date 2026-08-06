@@ -1,17 +1,18 @@
 import { parseReleaseNotes } from "./release-notes-core.mjs";
 
-const APP_VERSION = "1.0.11";
+const APP_VERSION = "1.1.0";
 const CHANGELOG_URL = `./CHANGELOG.md?v=${APP_VERSION}`;
 const FALLBACK_CHANGELOG = `
-## [1.0.11] - 2026-08-06
+## [1.1.0] - 2026-08-06
 
 ### 추가
 
-- 앱 정보에서 버전별 릴리즈 노트를 확인할 수 있는 화면을 추가했습니다.
+- 프롬프트 컬렉션과 태그 분류 기능을 추가했습니다.
+- 첨부 이미지를 포함한 ZIP 통합 백업 및 복원을 추가했습니다.
 
 ### 변경
 
-- 저장소 할당량이 1,000MB 이상이면 GB 단위로 표시하도록 변경했습니다.
+- 기존 JSON 백업 복원 호환성을 유지하면서 기본 백업 형식을 ZIP으로 변경했습니다.
 `;
 
 function ensureStylesheet() {
