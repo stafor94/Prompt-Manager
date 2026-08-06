@@ -1,4 +1,4 @@
-const CACHE_NAME = "prompt-manager-shell-v32";
+const CACHE_NAME = "prompt-manager-shell-v33";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -25,8 +25,7 @@ const APP_SHELL = [
   "./storage-quota.mjs",
   "./release-notes.js?v=1.1.0",
   "./release-notes-core.mjs",
-  "./release-notes.css?v=1.0.11",
-  "./CHANGELOG.md?v=1.0.11",
+  "./release-notes.css?v=1.1.0",
   "./CHANGELOG.md?v=1.1.0",
   "./prompt-organization-backup.js?v=1.1.0",
   "./prompt-organization-backup-core.mjs",
