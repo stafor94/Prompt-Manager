@@ -1,5 +1,10 @@
 const DEFAULT_SWIPE_THRESHOLD = 56;
 const HORIZONTAL_DOMINANCE_RATIO = 1.2;
+const SWIPE_START_DISTANCE = 8;
+const EDGE_RESISTANCE = 0.28;
+const SWIPE_ANIMATION_MS = 220;
+const SNAP_BACK_ANIMATION_MS = 180;
+const SWIPE_EASING = "cubic-bezier(0.22, 1, 0.36, 1)";
 
 export function getSwipeDirection(startX, startY, endX, endY, threshold = DEFAULT_SWIPE_THRESHOLD) {
   const deltaX = endX - startX;
@@ -14,6 +19,12 @@ export function resolveAdjacentIndex(currentIndex, itemCount, direction) {
     return currentIndex;
   }
   return Math.min(itemCount - 1, Math.max(0, currentIndex + direction));
+}
+
+export function getSwipeDragOffset(deltaX, hasAdjacent, resistance = EDGE_RESISTANCE) {
+  if (!Number.isFinite(deltaX)) return 0;
+  if (hasAdjacent) return deltaX;
+  return deltaX * Math.min(1, Math.max(0, resistance));
 }
 
 export function buildViewerCaption(item, index, total) {
@@ -37,9 +48,16 @@ function installImageNavigation() {
   if (!viewerDialog || !viewerStage || !viewerImage || !viewerCaption) return;
 
   let viewerContext = null;
-  let swipeStart = null;
+  let swipeGesture = null;
+  let previewImage = null;
+  let previewIndex = null;
+  let isAnimating = false;
+  let animationTimer = null;
+  let animationFrame = null;
   let pendingDuplicateWithoutImages = false;
   let duplicateResetTimer = null;
+
+  viewerImage.style.gridArea = "1 / 1";
 
   function isVisible(element) {
     if (!element || element.hidden || element.closest("[hidden]")) return false;
@@ -97,26 +115,156 @@ function installImageNavigation() {
     return !match || Number(match[1]) <= 1.001;
   }
 
+  function getStageWidth() {
+    return Math.max(viewerStage.clientWidth, 1);
+  }
+
+  function setImageOffset(image, offset, transition = "none") {
+    image.style.transition = transition;
+    image.style.transform = `translate3d(${offset}px, 0, 0) scale(1)`;
+  }
+
+  function clearAnimationHandles() {
+    clearTimeout(animationTimer);
+    animationTimer = null;
+    if (animationFrame !== null) {
+      cancelAnimationFrame(animationFrame);
+      animationFrame = null;
+    }
+  }
+
+  function removePreviewImage() {
+    previewImage?.remove();
+    previewImage = null;
+    previewIndex = null;
+  }
+
+  function resetSwipeVisuals({ preserveTransform = false } = {}) {
+    clearAnimationHandles();
+    removePreviewImage();
+    isAnimating = false;
+    viewerImage.style.transition = "none";
+    if (!preserveTransform) {
+      viewerImage.style.transform = "translate3d(0, 0, 0) scale(1)";
+    }
+  }
+
   function showViewerItem(index) {
     if (!viewerContext) return;
     const item = viewerContext.items[index];
     if (!item) return;
 
     viewerContext.index = index;
+    viewerImage.style.transition = "none";
     viewerImage.src = item.src;
     viewerImage.alt = item.imageName;
     viewerImage.style.transform = "translate3d(0, 0, 0) scale(1)";
     viewerCaption.textContent = buildViewerCaption(item, index, viewerContext.items.length);
   }
 
-  function moveViewer(direction) {
-    if (!viewerContext || !viewerIsAtBaseScale()) return;
+  function ensurePreviewImage(index, initialOffset) {
+    if (!viewerContext) return null;
+    if (previewImage && previewIndex === index) return previewImage;
+
+    removePreviewImage();
+    const item = viewerContext.items[index];
+    if (!item) return null;
+
+    const image = viewerImage.cloneNode(false);
+    image.removeAttribute("id");
+    image.src = item.src;
+    image.alt = "";
+    image.setAttribute("aria-hidden", "true");
+    image.style.gridArea = "1 / 1";
+    image.style.transition = "none";
+    image.style.transform = `translate3d(${initialOffset}px, 0, 0) scale(1)`;
+    viewerStage.append(image);
+    previewImage = image;
+    previewIndex = index;
+    return image;
+  }
+
+  function resolveSwipeTarget(direction) {
+    if (!viewerContext) return null;
     const nextIndex = resolveAdjacentIndex(
       viewerContext.index,
       viewerContext.items.length,
       direction,
     );
-    if (nextIndex !== viewerContext.index) showViewerItem(nextIndex);
+    return nextIndex === viewerContext.index ? null : nextIndex;
+  }
+
+  function updateSwipePreview(deltaX) {
+    if (!viewerContext || deltaX === 0) return;
+    const direction = deltaX < 0 ? 1 : -1;
+    const nextIndex = resolveSwipeTarget(direction);
+    const hasAdjacent = nextIndex !== null;
+    const offset = getSwipeDragOffset(deltaX, hasAdjacent);
+    setImageOffset(viewerImage, offset);
+
+    if (!hasAdjacent) {
+      removePreviewImage();
+      return;
+    }
+
+    const width = getStageWidth();
+    const previewStart = direction === 1 ? width : -width;
+    const image = ensurePreviewImage(nextIndex, previewStart);
+    if (image) setImageOffset(image, previewStart + offset);
+  }
+
+  function finishAnimation(callback, duration) {
+    clearTimeout(animationTimer);
+    animationTimer = setTimeout(() => {
+      animationTimer = null;
+      callback();
+    }, duration + 34);
+  }
+
+  function snapBack() {
+    const transition = `transform ${SNAP_BACK_ANIMATION_MS}ms ${SWIPE_EASING}`;
+    const width = getStageWidth();
+    const previewDirection = previewIndex !== null && viewerContext
+      ? Math.sign(previewIndex - viewerContext.index)
+      : 0;
+
+    isAnimating = true;
+    animationFrame = requestAnimationFrame(() => {
+      animationFrame = null;
+      setImageOffset(viewerImage, 0, transition);
+      if (previewImage && previewDirection !== 0) {
+        setImageOffset(previewImage, previewDirection > 0 ? width : -width, transition);
+      }
+      finishAnimation(() => resetSwipeVisuals(), SNAP_BACK_ANIMATION_MS);
+    });
+  }
+
+  function animateViewer(direction) {
+    if (!viewerContext || isAnimating || !viewerIsAtBaseScale()) return;
+    const nextIndex = resolveSwipeTarget(direction);
+    if (nextIndex === null) {
+      snapBack();
+      return;
+    }
+
+    const width = getStageWidth();
+    const outgoingTarget = direction === 1 ? -width : width;
+    const incomingStart = direction === 1 ? width : -width;
+    const incomingImage = ensurePreviewImage(nextIndex, incomingStart);
+    if (!incomingImage) return;
+
+    const transition = `transform ${SWIPE_ANIMATION_MS}ms ${SWIPE_EASING}`;
+    isAnimating = true;
+    animationFrame = requestAnimationFrame(() => {
+      animationFrame = null;
+      setImageOffset(viewerImage, outgoingTarget, transition);
+      setImageOffset(incomingImage, 0, transition);
+      finishAnimation(() => {
+        showViewerItem(nextIndex);
+        removePreviewImage();
+        isAnimating = false;
+      }, SWIPE_ANIMATION_MS);
+    });
   }
 
   function markDuplicateWithoutImages() {
@@ -172,43 +320,87 @@ function installImageNavigation() {
   }, true);
 
   viewerStage.addEventListener("pointerdown", (event) => {
-    if (!event.isPrimary || !viewerIsAtBaseScale()) return;
-    swipeStart = {
+    if (!event.isPrimary) {
+      swipeGesture = null;
+      resetSwipeVisuals({ preserveTransform: true });
+      return;
+    }
+    if (isAnimating || !viewerIsAtBaseScale()) return;
+    swipeGesture = {
       pointerId: event.pointerId,
-      x: event.clientX,
-      y: event.clientY,
+      startX: event.clientX,
+      startY: event.clientY,
+      currentX: event.clientX,
+      currentY: event.clientY,
+      horizontal: false,
     };
   });
 
+  viewerStage.addEventListener("pointermove", (event) => {
+    if (!swipeGesture || swipeGesture.pointerId !== event.pointerId || isAnimating) return;
+    if (!viewerIsAtBaseScale()) {
+      swipeGesture = null;
+      resetSwipeVisuals({ preserveTransform: true });
+      return;
+    }
+
+    swipeGesture.currentX = event.clientX;
+    swipeGesture.currentY = event.clientY;
+    const deltaX = event.clientX - swipeGesture.startX;
+    const deltaY = event.clientY - swipeGesture.startY;
+
+    if (!swipeGesture.horizontal) {
+      if (Math.abs(deltaX) < SWIPE_START_DISTANCE && Math.abs(deltaY) < SWIPE_START_DISTANCE) return;
+      if (Math.abs(deltaX) <= Math.abs(deltaY) * HORIZONTAL_DOMINANCE_RATIO) return;
+      swipeGesture.horizontal = true;
+    }
+
+    event.preventDefault();
+    updateSwipePreview(deltaX);
+  });
+
   viewerStage.addEventListener("pointerup", (event) => {
-    if (!swipeStart || swipeStart.pointerId !== event.pointerId) return;
+    if (!swipeGesture || swipeGesture.pointerId !== event.pointerId) return;
+    const gesture = swipeGesture;
+    swipeGesture = null;
+
+    if (!gesture.horizontal) {
+      resetSwipeVisuals();
+      return;
+    }
+
     const direction = getSwipeDirection(
-      swipeStart.x,
-      swipeStart.y,
+      gesture.startX,
+      gesture.startY,
       event.clientX,
       event.clientY,
     );
-    swipeStart = null;
-    if (direction !== 0) moveViewer(direction);
+    if (direction === 0 || resolveSwipeTarget(direction) === null) {
+      snapBack();
+      return;
+    }
+    animateViewer(direction);
   });
 
   viewerStage.addEventListener("pointercancel", () => {
-    swipeStart = null;
+    swipeGesture = null;
+    if (!isAnimating) snapBack();
   });
 
   viewerDialog.addEventListener("keydown", (event) => {
     if (event.key === "ArrowLeft") {
       event.preventDefault();
-      moveViewer(-1);
+      animateViewer(-1);
     } else if (event.key === "ArrowRight") {
       event.preventDefault();
-      moveViewer(1);
+      animateViewer(1);
     }
   });
 
   viewerDialog.addEventListener("close", () => {
     viewerContext = null;
-    swipeStart = null;
+    swipeGesture = null;
+    resetSwipeVisuals();
   });
 
   if (editorDialog && editorImageList) {
