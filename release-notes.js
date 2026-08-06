@@ -1,14 +1,14 @@
 import { parseReleaseNotes } from "./release-notes-core.mjs";
 
-const APP_VERSION = "1.1.2";
+const APP_VERSION = "1.1.3";
 const CHANGELOG_URL = `./CHANGELOG.md?v=${APP_VERSION}`;
 const FALLBACK_CHANGELOG = `
-## [1.1.2] - 2026-08-06
+## [1.1.3] - 2026-08-06
 
 ### 수정
 
-- 상세 화면의 태그가 본문과 겹치지 않도록 날짜, 태그, 본문, 첨부 이미지 영역을 독립된 행으로 분리했습니다.
-- 등록·수정 화면의 태그 칩 높이와 삭제 버튼 간격을 줄여 더 조밀하게 표시하도록 했습니다.
+- 설치형 PWA가 이전 정적 파일을 계속 표시하지 않도록 서비스 워커 갱신 확인과 네트워크 캐시 우회를 보강했습니다.
+- 프롬프트 목록의 태그 영역에 상단 여백을 추가해 LLM 필터 버튼과 맞닿거나 겹쳐 보이지 않도록 했습니다.
 `;
 
 function ensureStylesheet() {
