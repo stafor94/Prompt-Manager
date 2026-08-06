@@ -1,0 +1,117 @@
+.release-notes-actions {
+  display: flex;
+  justify-content: flex-start;
+  margin-top: 18px;
+}
+
+.release-notes-dialog {
+  width: min(680px, calc(100vw - 24px));
+  height: min(780px, calc(100dvh - 24px));
+}
+
+.release-notes-content {
+  display: grid;
+  align-content: start;
+  gap: 14px;
+}
+
+.release-notes-status {
+  min-height: 24px;
+}
+
+.release-notes-list {
+  display: grid;
+  gap: 12px;
+}
+
+.release-note-item {
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--outline) 42%, transparent);
+  border-radius: 16px;
+  background: var(--surface-container);
+}
+
+.release-note-item summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  min-height: 54px;
+  padding: 13px 16px;
+  cursor: pointer;
+  list-style: none;
+  color: var(--on-surface);
+}
+
+.release-note-item summary::-webkit-details-marker {
+  display: none;
+}
+
+.release-note-item summary::after {
+  content: "⌄";
+  flex: 0 0 auto;
+  color: var(--primary);
+  font-size: 1.25rem;
+  font-weight: 800;
+  transform: rotate(0deg);
+  transition: transform 160ms ease;
+}
+
+.release-note-item[open] summary::after {
+  transform: rotate(180deg);
+}
+
+.release-note-item summary strong {
+  margin-right: auto;
+  color: var(--primary);
+}
+
+.release-note-item summary span {
+  color: var(--on-surface-variant);
+  font-size: .86rem;
+  white-space: nowrap;
+}
+
+.release-note-body {
+  display: grid;
+  gap: 14px;
+  padding: 2px 16px 16px;
+  border-top: 1px solid color-mix(in srgb, var(--outline) 24%, transparent);
+}
+
+.release-note-group {
+  padding-top: 14px;
+}
+
+.release-note-group h3 {
+  margin: 0 0 8px;
+  font-size: .95rem;
+}
+
+.release-note-group ul {
+  display: grid;
+  gap: 7px;
+  margin: 0;
+  padding-left: 20px;
+  color: var(--on-surface-variant);
+  line-height: 1.5;
+}
+
+@media (max-width: 480px) {
+  .release-notes-dialog {
+    width: calc(100vw - 16px);
+    height: calc(100dvh - 16px);
+    max-width: calc(100vw - 16px);
+    max-height: calc(100dvh - 16px);
+  }
+
+  .release-note-item summary {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .release-note-item summary span {
+    order: 2;
+    width: 100%;
+  }
+}
