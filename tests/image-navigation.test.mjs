@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   buildViewerCaption,
   getSwipeDirection,
+  getSwipeDragOffset,
   resolveAdjacentIndex,
 } from "../image-navigation.js";
 
@@ -20,6 +21,16 @@ test("이전과 다음 인덱스는 배열 경계를 넘지 않는다", () => {
   assert.equal(resolveAdjacentIndex(1, 3, 1), 2);
   assert.equal(resolveAdjacentIndex(2, 3, 1), 2);
   assert.equal(resolveAdjacentIndex(0, 3, -1), 0);
+});
+
+test("이동 가능한 방향은 손가락 이동량을 그대로 사용한다", () => {
+  assert.equal(getSwipeDragOffset(-120, true), -120);
+  assert.equal(getSwipeDragOffset(80, true), 80);
+});
+
+test("목록 경계에서는 스와이프 이동량에 저항을 적용한다", () => {
+  assert.ok(Math.abs(getSwipeDragOffset(-100, false) + 28) < Number.EPSILON * 32);
+  assert.equal(getSwipeDragOffset(100, false, 0.4), 40);
 });
 
 test("뷰어 캡션은 현재 범위 기준 순번을 사용한다", () => {
