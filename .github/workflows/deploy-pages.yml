@@ -32,6 +32,7 @@ jobs:
           node --check archive-viewer-layout.js
           node --check archive-viewer-layout-core.mjs
           node --check archive-six-columns.js
+          node --check image-viewer-fit.js
           node --check library-controls.js
           node --check prompt-organization-backup.js
           node --check release-notes.js
