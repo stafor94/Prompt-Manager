@@ -1,3 +1,5 @@
+import { formatImageMetadata } from "./image-metadata.mjs";
+
 const DEFAULT_SWIPE_THRESHOLD = 56;
 const HORIZONTAL_DOMINANCE_RATIO = 1.2;
 const SWIPE_START_DISTANCE = 8;
@@ -27,9 +29,9 @@ export function getSwipeDragOffset(deltaX, hasAdjacent, resistance = EDGE_RESIST
   return deltaX * Math.min(1, Math.max(0, resistance));
 }
 
-export function buildViewerCaption(item, index, total) {
+export function buildViewerCaption(item, index, total, metadata = "") {
   const position = `${index + 1} / ${total}`;
-  return [position, item.promptTitle, item.imageName].filter(Boolean).join(" · ");
+  return [position, item.promptTitle, item.imageName, metadata].filter(Boolean).join(" · ");
 }
 
 function installImageNavigation() {
@@ -109,6 +111,23 @@ function installImageNavigation() {
     viewerContext = { items, index };
   }
 
+  function singleViewerIsActive() {
+    return viewerDialog.dataset.archiveViewerLayout !== "DUAL";
+  }
+
+  function renderSingleViewerCaption() {
+    if (!viewerContext || !singleViewerIsActive()) return;
+    const item = viewerContext.items[viewerContext.index];
+    if (!item) return;
+    const metadata = formatImageMetadata(viewerImage.naturalWidth, viewerImage.naturalHeight);
+    viewerCaption.textContent = buildViewerCaption(
+      item,
+      viewerContext.index,
+      viewerContext.items.length,
+      metadata,
+    );
+  }
+
   function viewerIsAtBaseScale() {
     const transform = viewerImage.style.transform;
     const match = transform.match(/scale\(([-\d.]+)\)/);
@@ -160,6 +179,9 @@ function installImageNavigation() {
     viewerImage.alt = item.imageName;
     viewerImage.style.transform = "translate3d(0, 0, 0) scale(1)";
     viewerCaption.textContent = buildViewerCaption(item, index, viewerContext.items.length);
+    if (viewerImage.complete && viewerImage.naturalWidth > 0) {
+      queueMicrotask(renderSingleViewerCaption);
+    }
   }
 
   function ensurePreviewImage(index, initialOffset) {
@@ -300,12 +322,14 @@ function installImageNavigation() {
     const detailButton = event.target.closest?.("#detailImageStrip [data-detail-image-index]");
     if (detailButton) {
       captureDetailContext(detailButton);
+      setTimeout(renderSingleViewerCaption, 0);
       return;
     }
 
     const archiveButton = event.target.closest?.("#imageArchiveGrid [data-archive-image-index]");
     if (archiveButton) {
       captureArchiveContext(archiveButton);
+      setTimeout(renderSingleViewerCaption, 0);
       return;
     }
 
@@ -318,6 +342,8 @@ function installImageNavigation() {
       clearPendingDuplicate();
     }
   }, true);
+
+  viewerImage.addEventListener("load", renderSingleViewerCaption);
 
   viewerStage.addEventListener("pointerdown", (event) => {
     if (!event.isPrimary) {
