@@ -20,6 +20,9 @@ test("2장보기는 화면을 좌우 두 칸으로 나눈다", async () => {
     css,
     /\.image-viewer-stage\.archive-dual-view-active\s*\{[^}]*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/s,
   );
-  assert.match(css, /#archiveScreen \.archive-toolbar\s*\{[^}]*grid-template-columns:[^;}]*3/s);
+  assert.match(
+    css,
+    /#archiveScreen \.archive-toolbar\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*\.9fr\)\s*minmax\(0,\s*1\.4fr\)\s*minmax\(0,\s*\.95fr\)/s,
+  );
   assert.match(css, /margin-inline:\s*-2px/);
 });
