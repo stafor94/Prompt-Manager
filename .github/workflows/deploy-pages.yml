@@ -59,20 +59,23 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if node --test; then
+          set +e
+          node --test 2>&1 | tee /tmp/node-test-output.txt
+          test_status=${PIPESTATUS[0]}
+          set -e
+          if [ "$test_status" -eq 0 ]; then
             exit 0
           fi
-          for test_file in test/*.mjs; do
-            if ! node --test "$test_file"; then
-              test_name="$(basename "$test_file" .mjs)"
-              gh api --method POST "/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
-                -f state=failure \
-                -f context="prompt-manager/failing-test-${test_name}" \
-                -f description="${test_file} failed"
-              break
-            fi
-          done
-          exit 1
+          failure_line="$(grep -m1 '^not ok ' /tmp/node-test-output.txt || true)"
+          failure_name="$(printf '%s' "$failure_line" | sed -E 's/^not ok [0-9]+ - //' | tr -cs '[:alnum:]_.-' '-' | cut -c1-80)"
+          if [ -z "$failure_name" ]; then
+            failure_name="unknown"
+          fi
+          gh api --method POST "/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
+            -f state=failure \
+            -f context="prompt-manager/test-failure-${failure_name}" \
+            -f description='node --test failed'
+          exit "$test_status"
       - name: Publish verification success
         if: ${{ success() }}
         env:
