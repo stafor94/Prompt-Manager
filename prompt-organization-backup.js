@@ -10,7 +10,7 @@ import {
 } from "./prompt-organization-backup-core.mjs";
 import { collectTagOptions, matchesPromptQuery } from "./prompt-tag-core.mjs";
 
-const APP_VERSION = "1.4.0";
+const APP_VERSION = "1.4.1";
 const DB_NAME = "prompt-vault";
 const DB_VERSION = 1;
 const STORE_NAME = "prompts";
