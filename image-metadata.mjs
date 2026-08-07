@@ -38,5 +38,5 @@ export function formatImageMetadata(width, height) {
   const ratio = formatAspectRatio(width, height);
   const resolution = formatResolution(width, height);
   if (!ratio || !resolution) return "";
-  return `비율 ${ratio} · ${resolution}`;
+  return `${resolution}(${ratio})`;
 }
