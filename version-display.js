@@ -1,5 +1,5 @@
 (() => {
-  const APP_VERSION = "1.5.1";
+  const APP_VERSION = "1.5.2";
 
   function applyVersion() {
     document.querySelectorAll(".app-version-badge").forEach((badge) => {
