@@ -6,8 +6,9 @@ import {
   resolveAdjacentDualPairStart,
   resolveDualPair,
 } from "./archive-viewer-layout-core.mjs";
+import { formatImageMetadata } from "./image-metadata.mjs";
 
-const APP_VERSION = "1.4.2";
+const APP_VERSION = "1.5.0";
 const ARCHIVE_VIEWER_LAYOUT_KEY = "prompt-manager-archive-viewer-layout";
 const DUAL_VIEWER_HISTORY_KEY = "promptManagerDualArchiveViewer";
 const ARCHIVE_VIEWER_HISTORY_KEY = "promptManagerArchiveViewer";
@@ -134,11 +135,39 @@ function captureDualContext(clickedButton) {
     : null;
 }
 
+function renderCurrentDualCaption() {
+  const viewerDialog = document.querySelector("#imageViewerDialog");
+  const viewerImage = document.querySelector("#imageViewerImage");
+  const viewerCaption = document.querySelector("#imageViewerCaption");
+  if (
+    !dualContext
+    || !viewerDialog
+    || viewerDialog.dataset.archiveViewerLayout !== ARCHIVE_VIEWER_LAYOUT_DUAL
+    || !viewerImage
+    || !viewerCaption
+  ) return;
+
+  const pair = resolveDualPair(dualContext.pairStart, dualContext.items.length);
+  if (pair.length === 0) return;
+
+  const leftMetadata = formatImageMetadata(viewerImage.naturalWidth, viewerImage.naturalHeight);
+  const rightMetadata = secondaryImage && !secondaryImage.hidden
+    ? formatImageMetadata(secondaryImage.naturalWidth, secondaryImage.naturalHeight)
+    : "";
+
+  viewerCaption.textContent = [
+    buildDualViewerCaption(dualContext.items, pair),
+    leftMetadata ? `왼쪽 ${leftMetadata}` : "",
+    rightMetadata ? `오른쪽 ${rightMetadata}` : "",
+  ].filter(Boolean).join(" · ");
+}
+
 function ensureSecondaryImage(viewerStage) {
   if (secondaryImage?.isConnected) return secondaryImage;
   secondaryImage = document.createElement("img");
   secondaryImage.className = "archive-dual-view-secondary";
   secondaryImage.alt = "";
+  secondaryImage.addEventListener("load", renderCurrentDualCaption);
   viewerStage.append(secondaryImage);
   return secondaryImage;
 }
@@ -195,6 +224,13 @@ function showDualPair(startIndex) {
   }
 
   viewerCaption.textContent = buildDualViewerCaption(dualContext.items, pair);
+  if (
+    viewerImage.complete
+    && viewerImage.naturalWidth > 0
+    && (!rightItem || (rightImage.complete && rightImage.naturalWidth > 0))
+  ) {
+    queueMicrotask(renderCurrentDualCaption);
+  }
 }
 
 function openDualViewer() {
@@ -245,8 +281,9 @@ function closeDualViewerThroughHistory(event) {
 function bindDualViewerEvents() {
   const viewerDialog = document.querySelector("#imageViewerDialog");
   const viewerStage = document.querySelector("#imageViewerStage");
+  const viewerImage = document.querySelector("#imageViewerImage");
   const closeButton = document.querySelector("#closeImageViewerButton");
-  if (!viewerDialog || !viewerStage) return;
+  if (!viewerDialog || !viewerStage || !viewerImage) return;
 
   document.addEventListener("click", (event) => {
     const button = event.target.closest?.("#imageArchiveGrid [data-archive-image-index]");
@@ -259,6 +296,8 @@ function bindDualViewerEvents() {
     event.stopPropagation();
     openDualViewer();
   }, true);
+
+  viewerImage.addEventListener("load", renderCurrentDualCaption);
 
   viewerStage.addEventListener("pointerdown", (event) => {
     if (!blockSingleViewerGesture(event) || !event.isPrimary) return;
