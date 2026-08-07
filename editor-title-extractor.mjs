@@ -34,7 +34,7 @@ export function extractTitleFromPromptText(text, options = {}) {
 
     for (let nextIndex = index + 1; nextIndex < lines.length; nextIndex += 1) {
       const candidate = lines[nextIndex].trim();
-      if (!candidate) continue;
+      if (!candidate || DECORATION_ONLY_PATTERN.test(candidate)) continue;
       if (SECTION_HEADER_PATTERN.test(candidate)) return "";
       return truncateByCharacters(candidate, maxLength);
     }
