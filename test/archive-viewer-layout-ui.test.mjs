@@ -26,3 +26,21 @@ test("2장보기는 화면을 좌우 두 칸으로 나눈다", async () => {
   );
   assert.match(css, /margin-inline:\s*-2px/);
 });
+
+test("2장보기 클릭은 기존 1장 뷰어로 전달하지 않고 두 장 뷰어를 직접 연다", async () => {
+  const source = await read("archive-viewer-layout.js");
+  assert.match(source, /archiveViewerLayout !== ARCHIVE_VIEWER_LAYOUT_DUAL/);
+  assert.match(source, /event\.preventDefault\(\)/);
+  assert.match(source, /event\.stopPropagation\(\)/);
+  assert.match(source, /openDualViewer\(\)/);
+  assert.match(source, /viewerDialog\.showModal\(\)/);
+  assert.match(source, /promptManagerDualArchiveViewer/);
+  assert.doesNotMatch(source, /queueMicrotask\(openCapturedDualViewer\)/);
+});
+
+test("2장보기 제스처는 캡처 단계에서 1장보기 스와이프보다 먼저 처리한다", async () => {
+  const source = await read("archive-viewer-layout.js");
+  assert.match(source, /viewerStage\.addEventListener\("pointerdown",[\s\S]*?\}, true\);/);
+  assert.match(source, /viewerStage\.addEventListener\("pointerup",[\s\S]*?moveDualPair\(deltaX < 0 \? 1 : -1\);[\s\S]*?\}, true\);/);
+  assert.match(source, /event\.stopImmediatePropagation\(\)/);
+});
