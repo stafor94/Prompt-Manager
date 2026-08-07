@@ -33,13 +33,23 @@ test("목록 경계에서는 스와이프 이동량에 저항을 적용한다", 
   assert.equal(getSwipeDragOffset(100, false, 0.4), 40);
 });
 
-test("뷰어 캡션은 현재 범위 기준 순번을 사용한다", () => {
+test("뷰어 캡션은 현재 범위 순번과 제목·메타정보를 사용하고 파일명은 제외한다", () => {
   assert.equal(
-    buildViewerCaption({ promptTitle: "테스트", imageName: "사진.png" }, 1, 3),
-    "2 / 3 · 테스트 · 사진.png",
+    buildViewerCaption(
+      { promptTitle: "테스트", imageName: "사진.png" },
+      1,
+      3,
+      "비율 9:16 · 1080×1920",
+    ),
+    "2 / 3 · 테스트 · 비율 9:16 · 1080×1920",
   );
   assert.equal(
-    buildViewerCaption({ promptTitle: "", imageName: "사진.png" }, 0, 2),
-    "1 / 2 · 사진.png",
+    buildViewerCaption(
+      { promptTitle: "", imageName: "사진.png" },
+      0,
+      2,
+      "비율 3:4 · 1080×1440",
+    ),
+    "1 / 2 · 비율 3:4 · 1080×1440",
   );
 });
