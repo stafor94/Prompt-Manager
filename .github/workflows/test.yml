@@ -19,13 +19,11 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Check changed JavaScript
+      - name: Check JavaScript syntax
+        shell: bash
         run: |
-          node --check update-manager.js
-          node --check version-display.js
-          node --check library-controls.js
-          node --check archive-six-columns.js
-          node --check release-notes.js
-          node --check sw.js
+          while IFS= read -r -d '' file; do
+            node --check "$file"
+          done < <(find . -maxdepth 1 -type f \( -name '*.js' -o -name '*.mjs' \) -print0)
       - name: Run tests
         run: node --test
