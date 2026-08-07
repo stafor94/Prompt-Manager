@@ -7,7 +7,7 @@ import {
   resolveDualPair,
 } from "./archive-viewer-layout-core.mjs";
 
-const APP_VERSION = "1.4.0";
+const APP_VERSION = "1.4.1";
 const ARCHIVE_VIEWER_LAYOUT_KEY = "prompt-manager-archive-viewer-layout";
 const SWIPE_THRESHOLD = 56;
 const HORIZONTAL_DOMINANCE_RATIO = 1.2;
