@@ -1,4 +1,4 @@
-const APP_VERSION = "1.3.1";
+const APP_VERSION = "1.4.0";
 const STORAGE_KEYS = Object.freeze({
   search: "prompt-manager-library-search",
   sort: "prompt-manager-library-sort",
