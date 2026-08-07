@@ -35,7 +35,6 @@ const APP_SHELL = [
   "./prompt-organization-backup.js?v=1.2.1",
   "./prompt-organization-backup-core.mjs",
   "./prompt-organization-backup.css?v=1.2.1",
-  "./prompt-organization-backup.css?v=1.2.0",
   "./prompt-tag-core.mjs",
   "./manifest.webmanifest?v=1.2.1",
   "./icons/icon.svg",
