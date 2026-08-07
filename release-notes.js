@@ -1,13 +1,17 @@
 import { parseReleaseNotes } from "./release-notes-core.mjs";
 
-const APP_VERSION = "1.2.1";
+const APP_VERSION = "1.3.0";
 const CHANGELOG_URL = `./CHANGELOG.md?v=${APP_VERSION}`;
 const FALLBACK_CHANGELOG = `
-## [1.2.1] - 2026-08-07
+## [1.3.0] - 2026-08-07
+
+### 추가
+
+- 프롬프트 카드 우측 상단에 항상 보이는 별 아이콘을 추가해 목록에서 바로 즐겨찾기를 등록하거나 해제할 수 있습니다.
 
 ### 변경
 
-- 프롬프트 등록·수정 화면의 본문 입력란 기본 표시 높이를 10행에서 7행으로 줄였습니다.
+- 등록·수정 화면의 즐겨찾기 입력을 제거하고 입력 요소 사이의 세로 여백을 줄여 이미지 첨부 영역이 더 빨리 보이도록 했습니다.
 `;
 
 function ensureStylesheet() {

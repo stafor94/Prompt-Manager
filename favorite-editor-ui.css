@@ -1,0 +1,119 @@
+#promptForm .dialog-content.form-card {
+  gap: 10px;
+}
+
+#promptForm .editor-options-row {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+}
+
+#promptForm .editor-llm-field,
+#promptForm .form-card > label,
+#promptForm .content-editor-field {
+  gap: 5px;
+}
+
+#promptForm .field-action-buttons {
+  gap: 0;
+}
+
+#promptForm .field-icon-button {
+  width: 36px;
+  min-width: 36px;
+  height: 36px;
+  min-height: 36px;
+}
+
+#promptForm .prompt-organization-editor {
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 14px;
+}
+
+#promptForm .prompt-organization-editor .tag-editor-field {
+  gap: 5px;
+}
+
+#promptForm .prompt-organization-editor input {
+  padding-block: 10px;
+}
+
+#promptForm .prompt-organization-editor small {
+  line-height: 1.3;
+}
+
+#promptForm .image-attachment-field {
+  gap: 6px;
+  padding-top: 0;
+}
+
+#promptForm .image-attachment-header {
+  gap: 8px;
+}
+
+#promptForm .image-attachment-header > div {
+  gap: 0;
+}
+
+#promptForm .compact-button {
+  min-height: 40px;
+}
+
+.prompt-card-header {
+  position: relative;
+  min-height: 40px;
+  padding-right: 46px;
+  overflow: visible;
+}
+
+.prompt-card .favorite-mark[data-card-favorite="true"] {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  min-width: 40px;
+  height: 40px;
+  min-height: 40px;
+  padding: 0;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--surface-container-high) 72%, transparent);
+  color: var(--on-surface-variant);
+  cursor: pointer;
+  font-size: 1.55rem;
+  font-weight: 700;
+  line-height: 1;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.prompt-card .favorite-mark[data-card-favorite="true"].active {
+  background: color-mix(in srgb, var(--primary-container) 78%, transparent);
+  color: var(--primary);
+}
+
+.prompt-card .favorite-mark[data-card-favorite="true"]:active {
+  transform: scale(.94);
+}
+
+.prompt-card .favorite-mark[data-card-favorite="true"]:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--primary) 45%, transparent);
+  outline-offset: 2px;
+}
+
+@media (max-width: 520px) {
+  #editorDialog .dialog-header {
+    padding: 14px 16px 8px;
+  }
+
+  #promptForm .dialog-content.form-card {
+    gap: 9px;
+    padding: 8px 16px 12px;
+  }
+
+  #promptForm .prompt-organization-editor {
+    padding: 9px 11px;
+  }
+}
