@@ -1,0 +1,96 @@
+#archiveScreen .archive-toolbar {
+  grid-template-columns: minmax(0, .9fr) minmax(0, 1.4fr) minmax(0, .95fr);
+  gap: 6px;
+  width: calc(100% + 4px);
+  margin-inline: -2px;
+}
+
+#archiveScreen .archive-mode-controls,
+#archiveScreen .archive-view-controls,
+#archiveScreen .archive-viewer-layout-controls {
+  gap: 3px;
+  padding: 3px;
+}
+
+#archiveScreen .archive-mode-button,
+#archiveScreen .archive-view-button,
+#archiveScreen .archive-viewer-layout-button {
+  min-height: 44px;
+  padding-inline: 4px;
+}
+
+.archive-viewer-layout-controls {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  background: var(--surface-container);
+  border-radius: 14px;
+}
+
+.archive-viewer-layout-button {
+  flex: 1 1 0;
+  min-width: 0;
+  border: 0;
+  border-radius: 10px;
+  color: var(--on-surface-variant);
+  background: transparent;
+  cursor: pointer;
+  font-size: .76rem;
+  font-weight: 800;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.archive-viewer-layout-button.active,
+.archive-viewer-layout-button[aria-pressed="true"] {
+  color: var(--on-primary-container);
+  background: var(--primary-container);
+}
+
+.image-viewer-stage.archive-dual-view-active {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: minmax(0, 1fr);
+  column-gap: 2px;
+  place-items: center;
+}
+
+.image-viewer-stage.archive-dual-view-active #imageViewerImage {
+  grid-area: 1 / 1 / 2 / 2 !important;
+}
+
+.image-viewer-stage.archive-dual-view-active .archive-dual-view-secondary {
+  grid-area: 1 / 2 / 2 / 3 !important;
+}
+
+.image-viewer-stage.archive-dual-view-active #imageViewerImage,
+.image-viewer-stage.archive-dual-view-active .archive-dual-view-secondary {
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  object-position: center;
+  transform: none !important;
+}
+
+@media (max-width: 520px) {
+  #archiveScreen .archive-toolbar {
+    grid-template-columns: minmax(0, .9fr) minmax(0, 1.4fr);
+    width: 100%;
+    margin-inline: 0;
+  }
+
+  #archiveScreen .archive-viewer-layout-controls {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 380px) {
+  #archiveScreen .archive-toolbar {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  #archiveScreen .archive-viewer-layout-controls {
+    grid-column: auto;
+  }
+}
