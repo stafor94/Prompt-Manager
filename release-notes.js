@@ -1,14 +1,14 @@
 import { parseReleaseNotes } from "./release-notes-core.mjs";
 
-const APP_VERSION = "1.1.3";
+const APP_VERSION = "1.2.0";
 const CHANGELOG_URL = `./CHANGELOG.md?v=${APP_VERSION}`;
 const FALLBACK_CHANGELOG = `
-## [1.1.3] - 2026-08-06
+## [1.2.0] - 2026-08-07
 
-### 수정
+### 추가
 
-- 설치형 PWA가 이전 정적 파일을 계속 표시하지 않도록 서비스 워커 갱신 확인과 네트워크 캐시 우회를 보강했습니다.
-- 프롬프트 목록의 태그 영역에 상단 여백을 추가해 LLM 필터 버튼과 맞닿거나 겹쳐 보이지 않도록 했습니다.
+- 본문 붙여넣기 버튼 사용 시 제목이 비어 있으면 \`제목\` 또는 \`타이틀\` 라벨에서 제목을 자동 추출하도록 했습니다.
+- 라벨 앞뒤에 특수문자나 기호가 있는 형식과 같은 줄 또는 다음 줄 제목을 지원합니다.
 `;
 
 function ensureStylesheet() {

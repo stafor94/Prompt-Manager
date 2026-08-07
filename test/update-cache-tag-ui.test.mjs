@@ -2,13 +2,13 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
-const APP_VERSION = "1.1.3";
+const APP_VERSION = "1.2.0";
 
 async function read(path) {
   return readFile(new URL(`../${path}`, import.meta.url), "utf8");
 }
 
-test("화면과 런타임 자산 버전이 v1.1.3으로 일치한다", async () => {
+test("화면과 런타임 자산 버전이 v1.2.0으로 일치한다", async () => {
   const [index, versionDisplay, releaseNotes] = await Promise.all([
     read("index.html"),
     read("version-display.js"),
@@ -17,7 +17,7 @@ test("화면과 런타임 자산 버전이 v1.1.3으로 일치한다", async () 
 
   assert.match(index, new RegExp(`>v${APP_VERSION}<`));
   assert.match(index, new RegExp(`update-manager\\.js\\?v=${APP_VERSION}`));
-  assert.doesNotMatch(index, /\?v=1\.1\.2/);
+  assert.doesNotMatch(index, /\?v=1\.1\.3/);
   assert.match(versionDisplay, new RegExp(`APP_VERSION = "${APP_VERSION}"`));
   assert.match(releaseNotes, new RegExp(`APP_VERSION = "${APP_VERSION}"`));
 });
@@ -28,11 +28,12 @@ test("서비스 워커가 HTTP 캐시를 우회해 신규 앱 셸을 확인한�
     read("update-manager.js"),
   ]);
 
-  assert.match(serviceWorker, /prompt-manager-shell-v36/);
+  assert.match(serviceWorker, /prompt-manager-shell-v37/);
   assert.match(serviceWorker, /cache: "no-store"/);
   assert.match(serviceWorker, /url\.searchParams\.set\("pm-shell", CACHE_NAME\)/);
-  assert.match(serviceWorker, /update-manager\.js\?v=1\.1\.3/);
-  assert.doesNotMatch(serviceWorker, /\?v=1\.1\.2|\?v=1\.0\.|\?v=1\.1\.1/);
+  assert.match(serviceWorker, /update-manager\.js\?v=1\.2\.0/);
+  assert.match(serviceWorker, /editor-title-extractor\.mjs/);
+  assert.doesNotMatch(serviceWorker, /\?v=1\.1\.3|\?v=1\.1\.2|\?v=1\.0\.|\?v=1\.1\.1/);
 
   assert.match(updateManager, /updateViaCache: "none"/);
   assert.match(updateManager, /await registration\.update\(\)/);
