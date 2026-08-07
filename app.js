@@ -315,7 +315,6 @@ renderEditorImages();
 updateTitleCount();
 state.editorSnapshot = asDuplicate ? null : currentEditorValue();
 elements.editorDialog.showModal();
-setTimeout(() => elements.promptTitleInput.focus(), 0);
 }
 function tryCloseEditor() {
 if (isEditorDirty() && !confirm("저장되지 않은 변경 사항이 있습니다. 편집을 종료할까요?")) return;
