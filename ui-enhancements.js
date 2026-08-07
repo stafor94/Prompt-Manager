@@ -332,7 +332,7 @@ function openArchiveImage(index) {
   imageViewerImage.src = image.dataUrl;
   imageViewerImage.alt = image.imageName;
   imageViewerImage.style.transform = "translate3d(0, 0, 0) scale(1)";
-  imageViewerCaption.textContent = `${index + 1} / ${archiveImages.length} · ${image.promptTitle} · ${image.imageName}`;
+  imageViewerCaption.textContent = `${index + 1} / ${archiveImages.length} · ${image.promptTitle}`;
   const currentState = history.state && typeof history.state === "object" ? history.state : {};
   history.pushState({ ...currentState, promptManagerArchiveViewer: true }, "", location.href);
   archiveViewerHistoryActive = true;
