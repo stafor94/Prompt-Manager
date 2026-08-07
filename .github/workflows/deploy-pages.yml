@@ -44,7 +44,23 @@ jobs:
           node --check ui-enhancements.js
           node --check sw.js
       - name: Run tests
-        run: node --test
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if node --test; then
+            exit 0
+          fi
+          for test_file in test/*.mjs; do
+            if ! node --test "$test_file"; then
+              test_name="$(basename "$test_file" .mjs)"
+              gh api --method POST "/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
+                -f state=failure \
+                -f context="prompt-manager/failing-test-${test_name}" \
+                -f description="${test_file} failed"
+              break
+            fi
+          done
+          exit 1
       - name: Publish verification success
         if: ${{ success() }}
         env:
