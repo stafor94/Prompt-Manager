@@ -41,5 +41,5 @@ test("2장 뷰어는 왼쪽과 오른쪽 이미지 메타 정보를 각각 표�
 test("이미지 메타데이터 모듈은 오프라인 앱 셸에 포함된다", async () => {
   const sw = await read("sw.js");
   assert.match(sw, /\.\/image-metadata\.mjs/);
-  assert.match(sw, /prompt-manager-shell-v44|prompt-manager-shell-v45/);
+  assert.match(sw, /prompt-manager-shell-v45/);
 });
