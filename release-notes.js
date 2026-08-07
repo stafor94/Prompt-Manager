@@ -1,13 +1,19 @@
 import { parseReleaseNotes } from "./release-notes-core.mjs";
 
-const APP_VERSION = "1.3.1";
+const APP_VERSION = "1.4.0";
 const CHANGELOG_URL = `./CHANGELOG.md?v=${APP_VERSION}`;
 const FALLBACK_CHANGELOG = `
-## [1.3.1] - 2026-08-07
+## [1.4.0] - 2026-08-07
 
-### 수정
+### 추가
 
-- 등록·수정 팝업을 열 때 제목 입력란에 자동으로 포커스하지 않도록 변경해 모바일 키보드가 즉시 열리지 않게 했습니다.
+- 보관함에 \`1장보기\`와 \`2장보기\` 확대 보기 옵션을 추가했습니다.
+- \`2장보기\`에서는 폴더블 화면을 활용해 이미지를 좌우에 한 장씩 표시합니다.
+- \`2장보기\`에서도 좌우 스와이프와 방향키로 두 장 단위 탐색을 지원합니다.
+
+### 변경
+
+- 보관함 보기 제어 행의 좌우 여백과 내부 간격을 줄이고 확대 보기 선택을 가장 오른쪽에 배치했습니다.
 `;
 
 function ensureStylesheet() {
