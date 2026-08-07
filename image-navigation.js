@@ -31,7 +31,7 @@ export function getSwipeDragOffset(deltaX, hasAdjacent, resistance = EDGE_RESIST
 
 export function buildViewerCaption(item, index, total, metadata = "") {
   const position = `${index + 1} / ${total}`;
-  return [position, item.promptTitle, item.imageName, metadata].filter(Boolean).join(" · ");
+  return [position, item.promptTitle, metadata].filter(Boolean).join(" · ");
 }
 
 function installImageNavigation() {
@@ -82,8 +82,9 @@ function installImageNavigation() {
   function captureDetailContext(clickedButton) {
     const buttons = [...document.querySelectorAll("#detailImageStrip [data-detail-image-index]")]
       .filter(isVisible);
+    const promptTitle = document.querySelector("#detailTitle")?.textContent?.trim() ?? "";
     const items = buttons
-      .map((button) => imageItemFromButton(button))
+      .map((button) => imageItemFromButton(button, promptTitle))
       .filter(Boolean);
     const index = buttons.indexOf(clickedButton);
     if (index < 0 || items.length === 0) return;
@@ -322,14 +323,14 @@ function installImageNavigation() {
     const detailButton = event.target.closest?.("#detailImageStrip [data-detail-image-index]");
     if (detailButton) {
       captureDetailContext(detailButton);
-      setTimeout(renderSingleViewerCaption, 0);
+      queueMicrotask(renderSingleViewerCaption);
       return;
     }
 
     const archiveButton = event.target.closest?.("#imageArchiveGrid [data-archive-image-index]");
     if (archiveButton) {
       captureArchiveContext(archiveButton);
-      setTimeout(renderSingleViewerCaption, 0);
+      queueMicrotask(renderSingleViewerCaption);
       return;
     }
 
