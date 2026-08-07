@@ -27,6 +27,22 @@ test("1장 뷰어는 제목과 비율·해상도를 표시하고 파일명은 �
   );
 });
 
+test("기본 이미지 열기 경로도 캡션에 파일명을 넣지 않는다", async () => {
+  const [app, archiveUi] = await Promise.all([
+    read("app.js"),
+    read("ui-enhancements.js"),
+  ]);
+  const detailViewer = app.match(/function openImageViewer\([\s\S]*?\n}/)?.[0] ?? "";
+  const archiveViewer = archiveUi.match(/function openArchiveImage\([\s\S]*?\n}/)?.[0] ?? "";
+
+  assert.ok(detailViewer, "상세 이미지 열기 함수를 찾을 수 없습니다.");
+  assert.ok(archiveViewer, "보관함 이미지 열기 함수를 찾을 수 없습니다.");
+  assert.doesNotMatch(detailViewer, /imageViewerCaption\.textContent[^\n]*image\.name/);
+  assert.match(detailViewer, /detailTitle\.textContent\.trim\(\)/);
+  assert.doesNotMatch(archiveViewer, /imageViewerCaption\.textContent[^\n]*image\.imageName/);
+  assert.match(archiveViewer, /image\.promptTitle/);
+});
+
 test("2장 뷰어는 왼쪽과 오른쪽 이미지 메타 정보를 각각 표시한다", async () => {
   const source = await read("archive-viewer-layout.js");
   assert.match(source, /import \{ formatImageMetadata \} from "\.\/image-metadata\.mjs"/);
