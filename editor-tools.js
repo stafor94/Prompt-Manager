@@ -1,3 +1,6 @@
+import { extractTitleFromPromptText } from "./editor-title-extractor.mjs";
+
+const promptTitleInput = document.querySelector("#promptTitleInput");
 const promptContentInput = document.querySelector("#promptContentInput");
 const clearPromptContentButton = document.querySelector("#clearPromptContentButton");
 const pastePromptContentButton = document.querySelector("#pastePromptContentButton");
@@ -15,6 +18,18 @@ function showMessage(message) {
 
 function notifyContentChanged() {
   promptContentInput?.dispatchEvent(new Event("input", { bubbles: true }));
+}
+
+function fillTitleFromContentIfEmpty() {
+  if (!promptTitleInput || !promptContentInput || promptTitleInput.value.trim()) return false;
+
+  const maxLength = promptTitleInput.maxLength > 0 ? promptTitleInput.maxLength : undefined;
+  const extractedTitle = extractTitleFromPromptText(promptContentInput.value, { maxLength });
+  if (!extractedTitle) return false;
+
+  promptTitleInput.value = extractedTitle;
+  promptTitleInput.dispatchEvent(new Event("input", { bubbles: true }));
+  return true;
 }
 
 clearPromptContentButton?.addEventListener("click", () => {
@@ -53,8 +68,11 @@ pastePromptContentButton?.addEventListener("click", async () => {
 
     promptContentInput.setRangeText(text, start, end, "end");
     notifyContentChanged();
+    const titleFilled = fillTitleFromContentIfEmpty();
     promptContentInput.focus();
-    showMessage("클립보드 내용을 붙여넣었습니다.");
+    showMessage(titleFilled
+      ? "클립보드 내용을 붙여넣고 제목을 자동 입력했습니다."
+      : "클립보드 내용을 붙여넣었습니다.");
   } catch {
     showMessage("클립보드를 읽을 수 없습니다. 브라우저 권한을 확인하세요.");
   }
