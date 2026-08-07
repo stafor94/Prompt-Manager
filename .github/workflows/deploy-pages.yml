@@ -29,20 +29,32 @@ jobs:
         with:
           node-version: 22
       - name: Check changed JavaScript
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          node --check app.js
-          node --check archive-viewer-layout.js
-          node --check archive-viewer-layout-core.mjs
-          node --check archive-six-columns.js
-          node --check image-navigation.js
-          node --check image-metadata.mjs
-          node --check image-viewer-fit.js
-          node --check library-controls.js
-          node --check prompt-organization-backup.js
-          node --check release-notes.js
-          node --check version-display.js
-          node --check ui-enhancements.js
-          node --check sw.js
+          for source_file in \
+            app.js \
+            archive-viewer-layout.js \
+            archive-viewer-layout-core.mjs \
+            archive-six-columns.js \
+            image-navigation.js \
+            image-metadata.mjs \
+            image-viewer-fit.js \
+            library-controls.js \
+            prompt-organization-backup.js \
+            release-notes.js \
+            version-display.js \
+            ui-enhancements.js \
+            sw.js; do
+            if ! node --check "$source_file"; then
+              source_name="$(basename "$source_file")"
+              gh api --method POST "/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
+                -f state=failure \
+                -f context="prompt-manager/failing-check-${source_name}" \
+                -f description="node --check ${source_file} failed"
+              exit 1
+            fi
+          done
       - name: Run tests
         env:
           GH_TOKEN: ${{ github.token }}
