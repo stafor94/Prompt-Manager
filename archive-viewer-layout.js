@@ -7,8 +7,10 @@ import {
   resolveDualPair,
 } from "./archive-viewer-layout-core.mjs";
 
-const APP_VERSION = "1.4.1";
+const APP_VERSION = "1.4.2";
 const ARCHIVE_VIEWER_LAYOUT_KEY = "prompt-manager-archive-viewer-layout";
+const DUAL_VIEWER_HISTORY_KEY = "promptManagerDualArchiveViewer";
+const ARCHIVE_VIEWER_HISTORY_KEY = "promptManagerArchiveViewer";
 const SWIPE_THRESHOLD = 56;
 const HORIZONTAL_DOMINANCE_RATIO = 1.2;
 
@@ -16,6 +18,7 @@ let archiveViewerLayout = readArchiveViewerLayout();
 let dualContext = null;
 let dualGesture = null;
 let secondaryImage = null;
+let dualViewerHistoryActive = false;
 
 function readArchiveViewerLayout() {
   try {
@@ -194,15 +197,20 @@ function showDualPair(startIndex) {
   viewerCaption.textContent = buildDualViewerCaption(dualContext.items, pair);
 }
 
-function openCapturedDualViewer() {
+function openDualViewer() {
   const viewerDialog = document.querySelector("#imageViewerDialog");
-  if (
-    archiveViewerLayout !== ARCHIVE_VIEWER_LAYOUT_DUAL
-    || !dualContext
-    || !viewerDialog?.open
-  ) return;
+  if (!dualContext || !viewerDialog || viewerDialog.open) return false;
 
   showDualPair(dualContext.clickedIndex);
+  const currentState = history.state && typeof history.state === "object" ? history.state : {};
+  history.pushState({
+    ...currentState,
+    [ARCHIVE_VIEWER_HISTORY_KEY]: true,
+    [DUAL_VIEWER_HISTORY_KEY]: true,
+  }, "", location.href);
+  dualViewerHistoryActive = true;
+  viewerDialog.showModal();
+  return true;
 }
 
 function moveDualPair(direction) {
@@ -226,18 +234,30 @@ function blockSingleViewerGesture(event) {
   return true;
 }
 
+function closeDualViewerThroughHistory(event) {
+  if (!isDualViewerActive() || !dualViewerHistoryActive) return false;
+  event?.preventDefault();
+  event?.stopImmediatePropagation();
+  history.back();
+  return true;
+}
+
 function bindDualViewerEvents() {
   const viewerDialog = document.querySelector("#imageViewerDialog");
   const viewerStage = document.querySelector("#imageViewerStage");
+  const closeButton = document.querySelector("#closeImageViewerButton");
   if (!viewerDialog || !viewerStage) return;
 
   document.addEventListener("click", (event) => {
     const button = event.target.closest?.("#imageArchiveGrid [data-archive-image-index]");
-    if (!button) return;
+    if (!button || archiveViewerLayout !== ARCHIVE_VIEWER_LAYOUT_DUAL) return;
+
     captureDualContext(button);
-    if (archiveViewerLayout === ARCHIVE_VIEWER_LAYOUT_DUAL) {
-      queueMicrotask(openCapturedDualViewer);
-    }
+    if (!dualContext) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+    openDualViewer();
   }, true);
 
   viewerStage.addEventListener("pointerdown", (event) => {
@@ -289,7 +309,24 @@ function bindDualViewerEvents() {
     moveDualPair(event.key === "ArrowRight" ? 1 : -1);
   }, true);
 
-  viewerDialog.addEventListener("close", resetDualViewer);
+  closeButton?.addEventListener("click", (event) => {
+    closeDualViewerThroughHistory(event);
+  }, true);
+
+  viewerDialog.addEventListener("cancel", (event) => {
+    closeDualViewerThroughHistory(event);
+  }, true);
+
+  viewerDialog.addEventListener("close", () => {
+    dualViewerHistoryActive = false;
+    resetDualViewer();
+  });
+
+  window.addEventListener("popstate", () => {
+    if (!dualViewerHistoryActive) return;
+    dualViewerHistoryActive = false;
+    if (viewerDialog.open) viewerDialog.close();
+  });
 }
 
 function initArchiveViewerLayout() {
