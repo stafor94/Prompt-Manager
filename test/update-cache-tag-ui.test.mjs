@@ -9,10 +9,11 @@ async function read(path) {
 }
 
 test("화면과 런타임 자산 버전이 v1.5.1으로 일치한다", async () => {
-  const [index, versionDisplay, releaseNotes] = await Promise.all([
+  const [index, versionDisplay, releaseNotes, promptOrganization] = await Promise.all([
     read("index.html"),
     read("version-display.js"),
     read("release-notes.js"),
+    read("prompt-organization-backup.js"),
   ]);
 
   assert.match(index, new RegExp(`>v${APP_VERSION}<`));
@@ -21,6 +22,7 @@ test("화면과 런타임 자산 버전이 v1.5.1으로 일치한다", async () 
   assert.match(versionDisplay, new RegExp(`APP_VERSION = "${APP_VERSION}"`));
   assert.match(versionDisplay, /archive-viewer-layout\.js\?v=\$\{APP_VERSION\}/);
   assert.match(releaseNotes, new RegExp(`APP_VERSION = "${APP_VERSION}"`));
+  assert.match(promptOrganization, new RegExp(`APP_VERSION = "${APP_VERSION}"`));
 });
 
 test("본문 입력란은 기본 7행을 표시한다", async () => {
@@ -74,7 +76,9 @@ test("서비스 워커가 HTTP 캐시를 우회해 신규 앱 셸을 확인한�
   assert.match(serviceWorker, /image-navigation\.js\?v=1\.5\.1/);
   assert.match(serviceWorker, /image-metadata\.mjs/);
   assert.match(serviceWorker, /image-viewer-fit\.js\?v=1\.5\.1/);
-  assert.doesNotMatch(serviceWorker, /\?v=1\.4\./);
+  assert.match(serviceWorker, /prompt-organization-backup\.js\?v=1\.5\.1/);
+  assert.match(serviceWorker, /prompt-organization-backup\.css\?v=1\.5\.1/);
+  assert.doesNotMatch(serviceWorker, /\?v=1\.5\.0|\?v=1\.4\./);
 
   assert.match(updateManager, /updateViaCache: "none"/);
   assert.match(updateManager, /await registration\.update\(\)/);
