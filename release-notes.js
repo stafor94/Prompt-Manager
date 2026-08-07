@@ -1,14 +1,13 @@
 import { parseReleaseNotes } from "./release-notes-core.mjs";
 
-const APP_VERSION = "1.2.0";
+const APP_VERSION = "1.2.1";
 const CHANGELOG_URL = `./CHANGELOG.md?v=${APP_VERSION}`;
 const FALLBACK_CHANGELOG = `
-## [1.2.0] - 2026-08-07
+## [1.2.1] - 2026-08-07
 
-### 추가
+### 변경
 
-- 본문 붙여넣기 버튼 사용 시 제목이 비어 있으면 \`제목\` 또는 \`타이틀\` 라벨에서 제목을 자동 추출하도록 했습니다.
-- 라벨 앞뒤에 특수문자나 기호가 있는 형식과 같은 줄 또는 다음 줄 제목을 지원합니다.
+- 프롬프트 등록·수정 화면의 본문 입력란 기본 표시 높이를 10행에서 7행으로 줄였습니다.
 `;
 
 function ensureStylesheet() {
