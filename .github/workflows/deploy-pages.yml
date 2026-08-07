@@ -9,6 +9,7 @@ permissions:
   contents: read
   pages: write
   id-token: write
+  statuses: write
 
 concurrency:
   group: github-pages
@@ -41,6 +42,24 @@ jobs:
           node --check sw.js
       - name: Run tests
         run: node --test
+      - name: Publish verification success
+        if: ${{ success() }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api --method POST "/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
+            -f state=success \
+            -f context='prompt-manager/verification' \
+            -f description='node --check and node --test passed'
+      - name: Publish verification failure
+        if: ${{ failure() }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api --method POST "/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
+            -f state=failure \
+            -f context='prompt-manager/verification' \
+            -f description='node --check or node --test failed'
       - name: Configure Pages
         uses: actions/configure-pages@v5
       - name: Upload static site
