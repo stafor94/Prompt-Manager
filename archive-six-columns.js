@@ -1,4 +1,4 @@
-const APP_VERSION = "1.4.1";
+const APP_VERSION = "1.4.2";
 const ARCHIVE_COLUMNS_KEY = "prompt-manager-archive-columns";
 const SIX_COLUMNS_KEY = "prompt-manager-archive-six-columns";
 
