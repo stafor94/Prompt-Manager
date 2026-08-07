@@ -44,9 +44,10 @@ export function buildDualViewerCaption(items, pairIndexes) {
   const position = validIndexes.length === 1
     ? `${validIndexes[0] + 1} / ${items.length}`
     : `${validIndexes[0] + 1}–${validIndexes.at(-1) + 1} / ${items.length}`;
-  const titles = [...new Set(validIndexes
-    .map((index) => items[index]?.promptTitle?.trim())
-    .filter(Boolean))];
+  const leftTitle = items[validIndexes[0]]?.promptTitle?.trim() ?? "";
+  const title = leftTitle
+    ? `${leftTitle}${validIndexes.length > 1 ? " 외 1" : ""}`
+    : "";
 
-  return [position, ...titles].join(" · ");
+  return [position, title].filter(Boolean).join(" · ");
 }
