@@ -26,6 +26,10 @@ test("제목 라벨 다음 유효 줄이 섹션 헤더면 제목으로 사용하
   assert.equal(extractTitleFromPromptText("[제목]\n\n[실행 지시]\n내용"), "");
 });
 
+test("제목 라벨 다음의 순수 기호 줄은 건너뛴다", () => {
+  assert.equal(extractTitleFromPromptText("[타이틀]\n---\n버스정류장 룩"), "버스정류장 룩");
+});
+
 test("CRLF와 maxlength를 처리한다", () => {
   assert.equal(extractTitleFromPromptText("【제목】\r\n가나다라마바사", { maxLength: 4 }), "가나다라");
 });
