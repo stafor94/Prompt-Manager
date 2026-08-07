@@ -32,12 +32,13 @@ test("2장보기 이동은 두 장 단위로 이동하고 범위를 넘지 않�
   assert.equal(resolveAdjacentDualPairStart(2, 6, -1), 0);
 });
 
-test("2장보기 캡션은 표시 중인 범위와 프롬프트 제목을 사용한다", () => {
+test("2장보기 캡션은 왼쪽 프롬프트 제목 하나와 외 1만 표시한다", () => {
   const items = [
     { promptTitle: "첫 프롬프트" },
     { promptTitle: "첫 프롬프트" },
     { promptTitle: "둘째 프롬프트" },
   ];
-  assert.equal(buildDualViewerCaption(items, [0, 1]), "1–2 / 3 · 첫 프롬프트");
-  assert.equal(buildDualViewerCaption(items, [1, 2]), "2–3 / 3 · 첫 프롬프트 · 둘째 프롬프트");
+  assert.equal(buildDualViewerCaption(items, [0, 1]), "1–2 / 3 · 첫 프롬프트 외 1");
+  assert.equal(buildDualViewerCaption(items, [1, 2]), "2–3 / 3 · 첫 프롬프트 외 1");
+  assert.equal(buildDualViewerCaption(items, [2]), "3 / 3 · 둘째 프롬프트");
 });
