@@ -469,7 +469,7 @@ const image = state.detailImages[index];
 if (!image) return;
 elements.imageViewerImage.src = image.dataUrl;
 elements.imageViewerImage.alt = image.name;
-elements.imageViewerCaption.textContent = `${index + 1} / ${state.detailImages.length} · ${image.name}`;
+elements.imageViewerCaption.textContent = `${index + 1} / ${state.detailImages.length} · ${elements.detailTitle.textContent.trim()}`;
 resetViewerTransform();
 elements.imageViewerDialog.showModal();
 history.pushState({ ...(history.state ?? {}), promptManagerImageViewer: true }, "", location.href);
