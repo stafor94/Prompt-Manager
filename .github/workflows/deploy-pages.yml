@@ -30,6 +30,7 @@ jobs:
           node-version: 22
       - name: Check changed JavaScript
         run: |
+          node --check app.js
           node --check archive-viewer-layout.js
           node --check archive-viewer-layout-core.mjs
           node --check archive-six-columns.js
