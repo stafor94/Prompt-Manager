@@ -23,6 +23,23 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check changed JavaScript
+        run: |
+          node --check archive-viewer-layout.js
+          node --check archive-viewer-layout-core.mjs
+          node --check archive-six-columns.js
+          node --check library-controls.js
+          node --check prompt-organization-backup.js
+          node --check release-notes.js
+          node --check version-display.js
+          node --check ui-enhancements.js
+          node --check sw.js
+      - name: Run tests
+        run: node --test
       - name: Configure Pages
         uses: actions/configure-pages@v5
       - name: Upload static site
