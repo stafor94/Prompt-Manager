@@ -17,7 +17,7 @@ function installImageViewerFit() {
   let frameId = null;
 
   function removeSwipePreviewImages() {
-    stage.querySelectorAll("img").forEach((candidate) => {
+    stage.querySelectorAll('img[aria-hidden="true"]').forEach((candidate) => {
       if (candidate !== image) candidate.remove();
     });
   }
