@@ -39,7 +39,7 @@ const APP_SHELL = [
   "./release-notes-core.mjs",
   "./release-notes.css?v=1.5.1",
   "./CHANGELOG.md?v=1.5.1",
-  "./prompt-organization-backup.js?v=1.5.0",
+  "./prompt-organization-backup.js?v=1.5.1",
   "./prompt-organization-backup-core.mjs",
   "./prompt-organization-backup.css?v=1.5.0",
   "./prompt-tag-core.mjs",
