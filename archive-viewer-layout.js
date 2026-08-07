@@ -8,7 +8,7 @@ import {
 } from "./archive-viewer-layout-core.mjs";
 import { formatImageMetadata } from "./image-metadata.mjs";
 
-const APP_VERSION = "1.5.1";
+const APP_VERSION = "1.5.2";
 const ARCHIVE_VIEWER_LAYOUT_KEY = "prompt-manager-archive-viewer-layout";
 const DUAL_VIEWER_HISTORY_KEY = "promptManagerDualArchiveViewer";
 const ARCHIVE_VIEWER_HISTORY_KEY = "promptManagerArchiveViewer";
@@ -157,8 +157,8 @@ function renderCurrentDualCaption() {
 
   viewerCaption.textContent = [
     buildDualViewerCaption(dualContext.items, pair),
-    leftMetadata ? `왼쪽 ${leftMetadata}` : "",
-    rightMetadata ? `오른쪽 ${rightMetadata}` : "",
+    leftMetadata ? `왼쪽-${leftMetadata}` : "",
+    rightMetadata ? `오른쪽-${rightMetadata}` : "",
   ].filter(Boolean).join(" · ");
 }
 
