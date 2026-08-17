@@ -5,7 +5,7 @@ import {
   takeArchiveSummaryBatch,
 } from "./archive-pagination-core.mjs";
 
-const APP_VERSION = "1.5.4";
+const APP_VERSION = "1.5.5";
 const ARCHIVE_COLUMNS_KEY = "prompt-manager-archive-columns";
 const ARCHIVE_MODE_KEY = "prompt-manager-archive-mode";
 const ARCHIVE_HISTORY_KEY = "promptManagerArchive";
@@ -148,7 +148,15 @@ function createArchiveScreen() {
       </div>
     </div>
     <div id="imageArchiveGrid" class="image-archive-grid" data-columns="3" data-mode="ALL" data-lazy-archive="true" aria-live="polite"></div>
-    <p id="archiveLoadMoreStatus" class="supporting-text" role="status" aria-live="polite" hidden></p>
+    <div id="archiveLoadMoreStatus" class="archive-load-more-indicator" role="status" aria-live="polite" hidden>
+      <span class="visually-hidden">목록 끝에서 위로 스와이프하면 이미지를 더 불러옵니다.</span>
+      <span class="archive-swipe-cue" aria-hidden="true">
+        <svg viewBox="0 0 24 28" focusable="false">
+          <path d="M5 16l7-7 7 7"></path>
+          <path d="M5 23l7-7 7 7"></path>
+        </svg>
+      </span>
+    </div>
     <div id="archiveEmptyState" class="empty-state hidden">
       <strong>첨부된 이미지가 없습니다.</strong>
       <p>프롬프트에 이미지를 첨부하면 이곳에 모아서 표시됩니다.</p>
@@ -317,9 +325,7 @@ function updateArchiveUi() {
   grid.dataset.archiveLoadedImages = String(archiveImages.length);
   grid.dataset.archiveTotalPrompts = String(archiveTotals.promptCount);
 
-  count.textContent = archiveHasMore() || archiveLoading
-    ? `로드 ${archiveImages.length} / ${archiveTotals.imageCount}장 · 프롬프트 ${archiveTotals.promptCount}개`
-    : `첨부 이미지 ${archiveImages.length}장 · 연결된 프롬프트 ${archiveTotals.promptCount}개`;
+  count.textContent = `첨부 이미지 ${archiveTotals.imageCount}장 · 연결된 프롬프트 ${archiveTotals.promptCount}개`;
 
   const hasImages = archiveTotals.imageCount > 0;
   empty.classList.toggle("hidden", hasImages);
@@ -334,16 +340,8 @@ function updateArchiveUi() {
       : "프롬프트에 이미지를 첨부하면 이곳에 모아서 표시됩니다.";
   }
 
-  if (archiveLoading) {
-    loadStatus.hidden = false;
-    loadStatus.textContent = "이미지를 불러오는 중입니다.";
-  } else if (archiveHasMore()) {
-    loadStatus.hidden = false;
-    loadStatus.textContent = `${archiveImages.length} / ${archiveTotals.imageCount}장 로드됨 · 목록 끝에서 위로 밀어 더 불러오기`;
-  } else {
-    loadStatus.hidden = true;
-    loadStatus.textContent = "";
-  }
+  const showSwipeCue = !archiveLoading && archiveHasMore() && hasImages;
+  loadStatus.hidden = !showSwipeCue;
 }
 
 async function loadNextArchiveBatch(expectedGeneration = archiveGeneration) {
