@@ -1,9 +1,18 @@
 import { parseReleaseNotes } from "./release-notes-core.mjs";
 
-const APP_VERSION = "1.5.4";
+const APP_VERSION = "1.5.5";
 const CHANGELOG_URL = `./CHANGELOG.md?v=${APP_VERSION}`;
 const FALLBACK_CHANGELOG = `
-## [1.5.4] - 2026-08-17
+## [1.5.5] - 2026-08-17
+
+### 수정
+
+- 보관함의 `N / 전체 장수 로드됨` 안내 문구를 제거했습니다.
+- 추가 이미지가 남아 있을 때 보관함 하단에 위쪽 스와이프를 의미하는 애니메이션 아이콘만 표시하도록 변경했습니다.
+- 이미지 로딩 중에는 안내 아이콘을 숨기고, 다음 묶음 로드가 가능한 상태에서만 다시 표시합니다.
+- 동작 줄이기 설정을 사용하는 환경에서는 안내 아이콘 애니메이션을 비활성화합니다.
+
+## [1.5.5] - 2026-08-17
 
 ### 성능
 
