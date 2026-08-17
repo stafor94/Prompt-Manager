@@ -51,6 +51,36 @@ export function takeArchiveSummaryBatch(
   };
 }
 
+export function splitArchiveImagesForFilledRows(
+  images,
+  currentImageCount,
+  columnCount,
+  hasMoreImages,
+) {
+  const source = Array.isArray(images) ? images : [];
+  const current = Number.isInteger(currentImageCount) && currentImageCount >= 0 ? currentImageCount : 0;
+  const requestedColumns = Number(columnCount);
+  const columns = [2, 3, 4, 6].includes(requestedColumns) ? requestedColumns : 3;
+
+  if (!hasMoreImages) {
+    return { visibleImages: [...source], pendingImages: [] };
+  }
+
+  const currentRemainder = current % columns;
+  let visibleCount = 0;
+  if (currentRemainder > 0) {
+    const neededToFillRow = columns - currentRemainder;
+    if (source.length >= neededToFillRow) visibleCount = neededToFillRow;
+  } else {
+    visibleCount = source.length - (source.length % columns);
+  }
+
+  return {
+    visibleImages: source.slice(0, visibleCount),
+    pendingImages: source.slice(visibleCount),
+  };
+}
+
 export function getArchiveTotals(summaries) {
   const source = Array.isArray(summaries) ? summaries : [];
   return {

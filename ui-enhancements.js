@@ -2,15 +2,16 @@ import { getAllPromptSummaries, getPromptRecords } from "./prompt-db.mjs";
 import {
   getArchiveTotals,
   prepareArchiveSummaries,
+  splitArchiveImagesForFilledRows,
   takeArchiveSummaryBatch,
 } from "./archive-pagination-core.mjs";
 
-const APP_VERSION = "1.5.5";
+const APP_VERSION = "1.5.6";
 const ARCHIVE_COLUMNS_KEY = "prompt-manager-archive-columns";
 const ARCHIVE_MODE_KEY = "prompt-manager-archive-mode";
 const ARCHIVE_HISTORY_KEY = "promptManagerArchive";
 const ARCHIVE_LLM_FILTER_KEY = "prompt-manager-archive-active-llms";
-const ARCHIVE_COLUMN_OPTIONS = new Set(["2", "3", "4"]);
+const ARCHIVE_COLUMN_OPTIONS = new Set(["2", "3", "4", "6"]);
 const ARCHIVE_MODE_OPTIONS = new Set(["ALL", "GROUPED"]);
 const ARCHIVE_LLM_TYPES = ["CHATGPT", "GEMINI", "GROK", "CLAUDE"];
 const ARCHIVE_PULL_THRESHOLD = 36;
@@ -22,6 +23,7 @@ const imageViewerImage = document.querySelector("#imageViewerImage");
 const imageViewerCaption = document.querySelector("#imageViewerCaption");
 
 let archiveImages = [];
+let archivePendingImages = [];
 let archiveSummaries = [];
 let archiveNextSummaryIndex = 0;
 let archiveTotals = { promptCount: 0, imageCount: 0 };
@@ -188,6 +190,7 @@ function setArchiveColumns(columns) {
     button.setAttribute("aria-pressed", String(active));
   });
   saveArchiveColumns(resolved);
+  window.dispatchEvent(new CustomEvent("prompt-manager:archive-columns-change", { detail: { columns: resolved } }));
 }
 
 function setArchiveMode(mode) {
@@ -310,8 +313,19 @@ function appendArchiveImages(images) {
   grid.append(...images.map((image, offset) => createArchiveImageItem(image, startIndex + offset)));
 }
 
+function getArchiveColumnCount() {
+  const value = Number(document.querySelector("#imageArchiveGrid")?.dataset.columns);
+  return [2, 3, 4, 6].includes(value) ? value : 3;
+}
+
 function archiveHasMore() {
-  return archiveNextSummaryIndex < archiveSummaries.length;
+  return archivePendingImages.length > 0 || archiveNextSummaryIndex < archiveSummaries.length;
+}
+
+function requestArchiveRowFill() {
+  if (!archiveActive || archiveLoading || !archiveHasMore()) return;
+  if (archiveImages.length % getArchiveColumnCount() === 0) return;
+  loadNextArchiveBatch().catch((error) => console.error(error instanceof Error ? error.message : "이미지 행 채우기 오류"));
 }
 
 function updateArchiveUi() {
@@ -347,21 +361,37 @@ function updateArchiveUi() {
 async function loadNextArchiveBatch(expectedGeneration = archiveGeneration) {
   if (!archiveActive || archiveLoading || !archiveHasMore()) return;
 
-  const page = takeArchiveSummaryBatch(archiveSummaries, archiveNextSummaryIndex);
-  if (page.batch.length === 0) {
-    archiveNextSummaryIndex = page.nextIndex;
-    updateArchiveUi();
-    return;
-  }
-
   archiveLoading = true;
   updateArchiveUi();
 
   try {
-    const records = await getPromptRecords(page.batch.map((summary) => summary.id));
-    if (!archiveActive || expectedGeneration !== archiveGeneration) return;
-    appendArchiveImages(buildArchiveImages(records));
-    archiveNextSummaryIndex = page.nextIndex;
+    while (archiveActive && expectedGeneration === archiveGeneration) {
+      const hasMoreSummaries = archiveNextSummaryIndex < archiveSummaries.length;
+      const split = splitArchiveImagesForFilledRows(
+        archivePendingImages,
+        archiveImages.length,
+        getArchiveColumnCount(),
+        hasMoreSummaries,
+      );
+      archivePendingImages = split.pendingImages;
+
+      if (split.visibleImages.length > 0) {
+        appendArchiveImages(split.visibleImages);
+        break;
+      }
+      if (!hasMoreSummaries) break;
+
+      const page = takeArchiveSummaryBatch(archiveSummaries, archiveNextSummaryIndex);
+      if (page.batch.length === 0) {
+        archiveNextSummaryIndex = page.nextIndex;
+        continue;
+      }
+
+      const records = await getPromptRecords(page.batch.map((summary) => summary.id));
+      if (!archiveActive || expectedGeneration !== archiveGeneration) return;
+      archivePendingImages.push(...buildArchiveImages(records));
+      archiveNextSummaryIndex = page.nextIndex;
+    }
   } finally {
     if (expectedGeneration === archiveGeneration) {
       archiveLoading = false;
@@ -375,6 +405,7 @@ async function renderArchiveGallery() {
   const generation = ++archiveGeneration;
   archiveLoading = true;
   archiveImages = [];
+  archivePendingImages = [];
   archiveSummaries = [];
   archiveNextSummaryIndex = 0;
   archiveTotals = { promptCount: 0, imageCount: 0 };
@@ -493,6 +524,7 @@ function deactivateArchive() {
   const loadStatus = document.querySelector("#archiveLoadMoreStatus");
   if (loadStatus) loadStatus.hidden = true;
   archiveImages = [];
+  archivePendingImages = [];
   archiveSummaries = [];
   archiveNextSummaryIndex = 0;
   archiveTotals = { promptCount: 0, imageCount: 0 };
@@ -545,6 +577,7 @@ function installArchiveUi() {
   imageViewerDialog?.addEventListener("close", () => { archiveViewerHistoryActive = false; });
   window.addEventListener("popstate", (event) => { if (event.state?.[ARCHIVE_HISTORY_KEY]) activateArchive(); else deactivateArchive(); });
   window.addEventListener("prompt-manager:archive-llm-filter-change", scheduleArchiveRefresh);
+  window.addEventListener("prompt-manager:archive-columns-change", requestArchiveRowFill);
 
   if (promptList) {
     const observer = new MutationObserver(() => { arrangePromptCardMeta(); scheduleArchiveRefresh(); });
