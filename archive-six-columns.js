@@ -1,4 +1,4 @@
-const APP_VERSION = "1.5.5";
+const APP_VERSION = "1.5.6";
 const ARCHIVE_COLUMNS_KEY = "prompt-manager-archive-columns";
 const SIX_COLUMNS_KEY = "prompt-manager-archive-six-columns";
 
@@ -61,6 +61,7 @@ function initArchiveSixColumns() {
   sixColumnButton.addEventListener("click", () => {
     writeSixColumnPreference(true);
     applyArchiveColumns("6");
+    window.dispatchEvent(new CustomEvent("prompt-manager:archive-columns-change", { detail: { columns: "6" } }));
   });
   controls.querySelectorAll('[data-archive-columns]:not([data-archive-columns="6"])').forEach((button) => {
     button.addEventListener("click", () => writeSixColumnPreference(false));

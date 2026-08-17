@@ -219,10 +219,10 @@
 
 .archive-load-more-indicator {
   display: flex;
-  min-height: 58px;
+  min-height: 46px;
   align-items: center;
   justify-content: center;
-  padding: 8px 0 18px;
+  padding: 4px 0 2px;
 }
 
 .archive-load-more-indicator[hidden] {

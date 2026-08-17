@@ -1,8 +1,17 @@
 import { parseReleaseNotes } from "./release-notes-core.mjs";
 
-const APP_VERSION = "1.5.5";
+const APP_VERSION = "1.5.6";
 const CHANGELOG_URL = `./CHANGELOG.md?v=${APP_VERSION}`;
 const FALLBACK_CHANGELOG = `
+## [1.5.6] - 2026-08-17
+
+### 수정
+
+- 보관함 추가 로드는 선택된 2·3·4·6열에 맞춰 마지막 표시 행이 채워지도록 정렬합니다.
+- 열 수 변경 후 마지막 행에 빈 칸이 생기면 남은 이미지가 있는 경우 필요한 수만 이어서 표시합니다.
+- 실제 데이터의 마지막 행은 이미지 누락 없이 모두 표시합니다.
+- 하단 위로 스와이프 안내 아이콘의 아래 여백을 더 줄였습니다.
+
 ## [1.5.5] - 2026-08-17
 
 ### 수정
