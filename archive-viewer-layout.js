@@ -8,7 +8,7 @@ import {
 } from "./archive-viewer-layout-core.mjs";
 import { formatImageMetadata } from "./image-metadata.mjs";
 
-const APP_VERSION = "1.5.2";
+const APP_VERSION = "1.5.3";
 const ARCHIVE_VIEWER_LAYOUT_KEY = "prompt-manager-archive-viewer-layout";
 const DUAL_VIEWER_HISTORY_KEY = "promptManagerDualArchiveViewer";
 const ARCHIVE_VIEWER_HISTORY_KEY = "promptManagerArchiveViewer";
@@ -22,19 +22,13 @@ let secondaryImage = null;
 let dualViewerHistoryActive = false;
 
 function readArchiveViewerLayout() {
-  try {
-    return normalizeArchiveViewerLayout(localStorage.getItem(ARCHIVE_VIEWER_LAYOUT_KEY));
-  } catch {
-    return ARCHIVE_VIEWER_LAYOUT_SINGLE;
-  }
+  try { return normalizeArchiveViewerLayout(localStorage.getItem(ARCHIVE_VIEWER_LAYOUT_KEY)); }
+  catch { return ARCHIVE_VIEWER_LAYOUT_SINGLE; }
 }
 
 function saveArchiveViewerLayout(layout) {
-  try {
-    localStorage.setItem(ARCHIVE_VIEWER_LAYOUT_KEY, layout);
-  } catch {
-    // 저장소 접근이 제한된 환경에서는 현재 세션 상태만 유지합니다.
-  }
+  try { localStorage.setItem(ARCHIVE_VIEWER_LAYOUT_KEY, layout); }
+  catch { /* 저장소 접근이 제한된 환경에서는 현재 세션 상태만 유지합니다. */ }
 }
 
 function installStylesheet() {
@@ -63,7 +57,6 @@ function setArchiveViewerLayout(layout) {
 function createLayoutControls(toolbar) {
   let controls = toolbar.querySelector(".archive-viewer-layout-controls");
   if (controls) return controls;
-
   controls = document.createElement("div");
   controls.className = "archive-viewer-layout-controls";
   controls.setAttribute("role", "group");
@@ -73,11 +66,9 @@ function createLayoutControls(toolbar) {
     <button class="archive-viewer-layout-button" type="button" data-archive-viewer-layout="DUAL" aria-label="이미지 두 장을 좌우로 보기">2장보기</button>
   `;
   toolbar.append(controls);
-
   controls.querySelectorAll("[data-archive-viewer-layout]").forEach((button) => {
     button.addEventListener("click", () => setArchiveViewerLayout(button.dataset.archiveViewerLayout));
   });
-
   syncLayoutButtons();
   return controls;
 }
@@ -104,14 +95,8 @@ function isVisibleArchiveItem(button) {
 function archiveItemFromButton(button, groupedTitle = "") {
   const image = button.querySelector("img");
   if (!image?.src) return null;
-  const promptTitle = groupedTitle
-    || button.querySelector(".image-archive-caption")?.textContent?.trim()
-    || "";
-  return {
-    src: image.src,
-    imageName: image.alt || "첨부 이미지",
-    promptTitle,
-  };
+  const promptTitle = groupedTitle || button.querySelector(".image-archive-caption")?.textContent?.trim() || "";
+  return { src: image.src, imageName: image.alt || "첨부 이미지", promptTitle };
 }
 
 function captureDualContext(clickedButton) {
@@ -121,40 +106,26 @@ function captureDualContext(clickedButton) {
     dualContext = null;
     return;
   }
-
   const groupedTitle = group?.querySelector(".archive-prompt-group-header h3")?.textContent?.trim() ?? "";
-  const buttons = [...container.querySelectorAll("[data-archive-image-index]")]
-    .filter(isVisibleArchiveItem);
-  const items = buttons
-    .map((button) => archiveItemFromButton(button, groupedTitle))
-    .filter(Boolean);
+  const buttons = [...container.querySelectorAll("[data-archive-image-index]")].filter(isVisibleArchiveItem);
+  const items = buttons.map((button) => archiveItemFromButton(button, groupedTitle)).filter(Boolean);
   const index = buttons.indexOf(clickedButton);
-
-  dualContext = index >= 0 && items.length > 0
-    ? { items, clickedIndex: index, pairStart: 0 }
-    : null;
+  dualContext = index >= 0 && items.length > 0 ? { items, clickedIndex: index, pairStart: 0 } : null;
 }
 
 function renderCurrentDualCaption() {
   const viewerDialog = document.querySelector("#imageViewerDialog");
   const viewerImage = document.querySelector("#imageViewerImage");
   const viewerCaption = document.querySelector("#imageViewerCaption");
-  if (
-    !dualContext
-    || !viewerDialog
-    || viewerDialog.dataset.archiveViewerLayout !== ARCHIVE_VIEWER_LAYOUT_DUAL
-    || !viewerImage
-    || !viewerCaption
-  ) return;
+  if (!dualContext || !viewerDialog || viewerDialog.dataset.archiveViewerLayout !== ARCHIVE_VIEWER_LAYOUT_DUAL
+    || !viewerImage || !viewerCaption) return;
 
   const pair = resolveDualPair(dualContext.pairStart, dualContext.items.length);
   if (pair.length === 0) return;
-
   const leftMetadata = formatImageMetadata(viewerImage.naturalWidth, viewerImage.naturalHeight);
   const rightMetadata = secondaryImage && !secondaryImage.hidden
     ? formatImageMetadata(secondaryImage.naturalWidth, secondaryImage.naturalHeight)
     : "";
-
   viewerCaption.textContent = [
     buildDualViewerCaption(dualContext.items, pair),
     leftMetadata ? `왼쪽-${leftMetadata}` : "",
@@ -176,7 +147,6 @@ function resetDualViewer() {
   const viewerDialog = document.querySelector("#imageViewerDialog");
   const viewerStage = document.querySelector("#imageViewerStage");
   const viewerImage = document.querySelector("#imageViewerImage");
-
   viewerDialog?.removeAttribute("data-archive-viewer-layout");
   viewerStage?.classList.remove("archive-dual-view-active");
   viewerImage?.classList.remove("archive-dual-view-primary");
@@ -199,7 +169,6 @@ function showDualPair(startIndex) {
 
   const pair = resolveDualPair(startIndex, dualContext.items.length);
   if (pair.length === 0) return;
-
   dualContext.pairStart = pair[0];
   const leftItem = dualContext.items[pair[0]];
   const rightItem = pair.length > 1 ? dualContext.items[pair[1]] : null;
@@ -224,11 +193,8 @@ function showDualPair(startIndex) {
   }
 
   viewerCaption.textContent = buildDualViewerCaption(dualContext.items, pair);
-  if (
-    viewerImage.complete
-    && viewerImage.naturalWidth > 0
-    && (!rightItem || (rightImage.complete && rightImage.naturalWidth > 0))
-  ) {
+  if (viewerImage.complete && viewerImage.naturalWidth > 0
+    && (!rightItem || (rightImage.complete && rightImage.naturalWidth > 0))) {
     queueMicrotask(renderCurrentDualCaption);
   }
 }
@@ -236,7 +202,6 @@ function showDualPair(startIndex) {
 function openDualViewer() {
   const viewerDialog = document.querySelector("#imageViewerDialog");
   if (!dualContext || !viewerDialog || viewerDialog.open) return false;
-
   showDualPair(dualContext.clickedIndex);
   const currentState = history.state && typeof history.state === "object" ? history.state : {};
   history.pushState({
@@ -251,11 +216,7 @@ function openDualViewer() {
 
 function moveDualPair(direction) {
   if (!dualContext || ![-1, 1].includes(direction)) return;
-  const nextStart = resolveAdjacentDualPairStart(
-    dualContext.pairStart,
-    dualContext.items.length,
-    direction,
-  );
+  const nextStart = resolveAdjacentDualPairStart(dualContext.pairStart, dualContext.items.length, direction);
   if (nextStart === dualContext.pairStart) return;
   showDualPair(nextStart);
 }
@@ -288,10 +249,8 @@ function bindDualViewerEvents() {
   document.addEventListener("click", (event) => {
     const button = event.target.closest?.("#imageArchiveGrid [data-archive-image-index]");
     if (!button || archiveViewerLayout !== ARCHIVE_VIEWER_LAYOUT_DUAL) return;
-
     captureDualContext(button);
     if (!dualContext) return;
-
     event.preventDefault();
     event.stopPropagation();
     openDualViewer();
@@ -301,11 +260,7 @@ function bindDualViewerEvents() {
 
   viewerStage.addEventListener("pointerdown", (event) => {
     if (!blockSingleViewerGesture(event) || !event.isPrimary) return;
-    dualGesture = {
-      pointerId: event.pointerId,
-      startX: event.clientX,
-      startY: event.clientY,
-    };
+    dualGesture = { pointerId: event.pointerId, startX: event.clientX, startY: event.clientY };
   }, true);
 
   viewerStage.addEventListener("pointermove", (event) => {
@@ -317,7 +272,6 @@ function bindDualViewerEvents() {
   viewerStage.addEventListener("pointerup", (event) => {
     if (!blockSingleViewerGesture(event)) return;
     if (!dualGesture || dualGesture.pointerId !== event.pointerId) return;
-
     const deltaX = event.clientX - dualGesture.startX;
     const deltaY = event.clientY - dualGesture.startY;
     dualGesture = null;
@@ -348,19 +302,12 @@ function bindDualViewerEvents() {
     moveDualPair(event.key === "ArrowRight" ? 1 : -1);
   }, true);
 
-  closeButton?.addEventListener("click", (event) => {
-    closeDualViewerThroughHistory(event);
-  }, true);
-
-  viewerDialog.addEventListener("cancel", (event) => {
-    closeDualViewerThroughHistory(event);
-  }, true);
-
+  closeButton?.addEventListener("click", (event) => closeDualViewerThroughHistory(event), true);
+  viewerDialog.addEventListener("cancel", (event) => closeDualViewerThroughHistory(event), true);
   viewerDialog.addEventListener("close", () => {
     dualViewerHistoryActive = false;
     resetDualViewer();
   });
-
   window.addEventListener("popstate", () => {
     if (!dualViewerHistoryActive) return;
     dualViewerHistoryActive = false;
@@ -374,6 +321,4 @@ function initArchiveViewerLayout() {
   bindDualViewerEvents();
 }
 
-if (typeof document !== "undefined") {
-  initArchiveViewerLayout();
-}
+if (typeof document !== "undefined") initArchiveViewerLayout();
