@@ -1,0 +1,37 @@
+name: Archive Swipe Indicator Sync
+
+on:
+  push:
+    branches:
+      - fix/archive-swipe-indicator-1.5.5
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/archive-swipe-indicator-1.5.5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Apply patch
+        run: python tools/archive_indicator_patch.py
+      - name: Verify
+        run: |
+          node --check ui-enhancements.js
+          node --check release-notes.js
+          node --check version-display.js
+          node --check sw.js
+          node --test
+      - name: Commit patch
+        run: |
+          git rm .github/workflows/archive-swipe-indicator-sync.yml tools/archive_indicator_patch.py
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Release 1.5.5 archive swipe indicator"
+          git push origin HEAD:fix/archive-swipe-indicator-1.5.5
