@@ -1,4 +1,6 @@
-const APP_VERSION = "1.5.2";
+import { getAllPromptRecords } from "./prompt-db.mjs";
+
+const APP_VERSION = "1.5.3";
 const ARCHIVE_COLUMNS_KEY = "prompt-manager-archive-columns";
 const ARCHIVE_MODE_KEY = "prompt-manager-archive-mode";
 const ARCHIVE_HISTORY_KEY = "promptManagerArchive";
@@ -15,6 +17,8 @@ let archiveImages = [];
 let archiveRefreshTimer = null;
 let archiveViewerHistoryActive = false;
 let archiveMode = readArchiveMode();
+let archiveActive = false;
+let archiveDirty = true;
 
 function readArchiveColumns() {
   try {
@@ -166,42 +170,6 @@ function setArchiveMode(mode) {
   renderArchiveContent();
 }
 
-function openPromptDatabase() {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open("prompt-vault", 1);
-    request.onupgradeneeded = () => {
-      const db = request.result;
-      if (!db.objectStoreNames.contains("prompts")) {
-        const store = db.createObjectStore("prompts", { keyPath: "id", autoIncrement: true });
-        store.createIndex("updatedAt", "updatedAt");
-        store.createIndex("llmType", "llmType");
-        store.createIndex("isFavorite", "isFavorite");
-      }
-    };
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error ?? new Error("이미지 보관함을 불러올 수 없습니다."));
-  });
-}
-
-function requestResult(request) {
-  return new Promise((resolve, reject) => {
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error ?? new Error("이미지 데이터를 읽을 수 없습니다."));
-  });
-}
-
-async function readArchivePrompts() {
-  const db = await openPromptDatabase();
-  if (!db.objectStoreNames.contains("prompts")) {
-    db.close();
-    return [];
-  }
-  const transaction = db.transaction("prompts", "readonly");
-  const prompts = await requestResult(transaction.objectStore("prompts").getAll());
-  db.close();
-  return prompts;
-}
-
 function buildArchiveImages(prompts) {
   return [...prompts]
     .sort((first, second) => (second.updatedAt ?? 0) - (first.updatedAt ?? 0))
@@ -212,6 +180,7 @@ function buildArchiveImages(prompts) {
         .map((image, index) => ({
           promptId: prompt.id,
           promptTitle: typeof prompt.title === "string" ? prompt.title : "제목 없음",
+          llmType: typeof prompt.llmType === "string" ? prompt.llmType : "",
           imageName: typeof image.name === "string" && image.name ? image.name : `첨부 이미지 ${index + 1}`,
           dataUrl: image.dataUrl,
         }));
@@ -225,11 +194,7 @@ function buildArchiveGroups(images) {
   images.forEach((image, archiveIndex) => {
     let group = groupsByPromptId.get(image.promptId);
     if (!group) {
-      group = {
-        promptId: image.promptId,
-        promptTitle: image.promptTitle,
-        images: [],
-      };
+      group = { promptId: image.promptId, promptTitle: image.promptTitle, images: [] };
       groupsByPromptId.set(image.promptId, group);
       groups.push(group);
     }
@@ -244,6 +209,8 @@ function createArchiveImageItem(image, index, showCaption = true) {
   button.type = "button";
   button.className = "image-archive-item";
   button.dataset.archiveImageIndex = String(index);
+  button.dataset.archiveLlmType = image.llmType;
+  button.dataset.promptId = String(image.promptId);
   button.setAttribute("aria-label", `${image.promptTitle}의 ${image.imageName} 확대 보기`);
 
   const thumbnail = document.createElement("img");
@@ -269,20 +236,15 @@ function createArchiveGroup(group) {
 
   const header = document.createElement("div");
   header.className = "archive-prompt-group-header";
-
   const title = document.createElement("h3");
   title.textContent = group.promptTitle;
   title.title = group.promptTitle;
-
   const count = document.createElement("span");
   count.className = "archive-prompt-group-count";
   count.textContent = `${group.images.length}장`;
-
   const imageGrid = document.createElement("div");
   imageGrid.className = "archive-prompt-group-grid";
-  imageGrid.replaceChildren(
-    ...group.images.map((image) => createArchiveImageItem(image, image.archiveIndex, false)),
-  );
+  imageGrid.replaceChildren(...group.images.map((image) => createArchiveImageItem(image, image.archiveIndex, false)));
 
   header.append(title, count);
   section.append(header, imageGrid);
@@ -293,24 +255,24 @@ function renderArchiveContent() {
   const grid = document.querySelector("#imageArchiveGrid");
   if (!grid) return;
   grid.dataset.mode = archiveMode;
-
   if (archiveMode === "GROUPED") {
-    const groups = buildArchiveGroups(archiveImages);
-    grid.replaceChildren(...groups.map(createArchiveGroup));
+    grid.replaceChildren(...buildArchiveGroups(archiveImages).map(createArchiveGroup));
     return;
   }
-
   grid.replaceChildren(...archiveImages.map((image, index) => createArchiveImageItem(image, index)));
 }
 
 async function renderArchiveGallery() {
+  if (!archiveActive) return;
   const grid = document.querySelector("#imageArchiveGrid");
   const count = document.querySelector("#archiveImageCount");
   const empty = document.querySelector("#archiveEmptyState");
   if (!grid || !count || !empty) return;
 
-  const prompts = await readArchivePrompts();
+  const prompts = await getAllPromptRecords();
+  if (!archiveActive) return;
   archiveImages = buildArchiveImages(prompts);
+  archiveDirty = false;
   const promptCount = new Set(archiveImages.map((image) => image.promptId)).size;
   count.textContent = `첨부 이미지 ${archiveImages.length}장 · 연결된 프롬프트 ${promptCount}개`;
   empty.classList.toggle("hidden", archiveImages.length > 0);
@@ -318,11 +280,11 @@ async function renderArchiveGallery() {
 }
 
 function scheduleArchiveRefresh() {
+  archiveDirty = true;
   clearTimeout(archiveRefreshTimer);
+  if (!archiveActive) return;
   archiveRefreshTimer = setTimeout(() => {
-    renderArchiveGallery().catch((error) => {
-      console.error(error instanceof Error ? error.message : "이미지 보관함 오류");
-    });
+    renderArchiveGallery().catch((error) => console.error(error instanceof Error ? error.message : "이미지 보관함 오류"));
   }, 60);
 }
 
@@ -346,7 +308,6 @@ function arrangePromptCardMeta() {
     const meta = card.querySelector(":scope > .prompt-meta");
     const favorite = header?.querySelector(".favorite-mark");
     if (!header || !badge || !meta) return;
-
     let group = header.querySelector(".prompt-card-primary-meta");
     if (!group) {
       group = document.createElement("div");
@@ -358,23 +319,28 @@ function arrangePromptCardMeta() {
 }
 
 function activateArchive() {
+  archiveActive = true;
   document.querySelectorAll(".nav-item").forEach((item) => {
     const active = item.dataset.route === "archive";
     item.classList.toggle("active", active);
     item.setAttribute("aria-current", active ? "page" : "false");
   });
-  document.querySelectorAll(".screen").forEach((screen) => {
-    screen.classList.toggle("active", screen.id === "archiveScreen");
-  });
+  document.querySelectorAll(".screen").forEach((screen) => screen.classList.toggle("active", screen.id === "archiveScreen"));
   window.scrollTo({ top: 0, behavior: "instant" });
-  scheduleArchiveRefresh();
+  if (archiveDirty) scheduleArchiveRefresh();
 }
 
 function deactivateArchive() {
+  archiveActive = false;
+  clearTimeout(archiveRefreshTimer);
   document.querySelector("#archiveScreen")?.classList.remove("active");
   const archiveNavItem = document.querySelector('.nav-item[data-route="archive"]');
   archiveNavItem?.classList.remove("active");
   archiveNavItem?.setAttribute("aria-current", "false");
+  const grid = document.querySelector("#imageArchiveGrid");
+  if (grid) grid.replaceChildren();
+  archiveImages = [];
+  archiveDirty = true;
 }
 
 function installArchiveUi() {
@@ -383,14 +349,8 @@ function installArchiveUi() {
   setArchiveColumns(readArchiveColumns());
   setArchiveMode(archiveMode);
 
-  document.querySelectorAll("[data-archive-columns]").forEach((button) => {
-    button.addEventListener("click", () => setArchiveColumns(button.dataset.archiveColumns));
-  });
-
-  document.querySelectorAll("[data-archive-mode]").forEach((button) => {
-    button.addEventListener("click", () => setArchiveMode(button.dataset.archiveMode));
-  });
-
+  document.querySelectorAll("[data-archive-columns]").forEach((button) => button.addEventListener("click", () => setArchiveColumns(button.dataset.archiveColumns)));
+  document.querySelectorAll("[data-archive-mode]").forEach((button) => button.addEventListener("click", () => setArchiveMode(button.dataset.archiveMode)));
   document.querySelector("#imageArchiveGrid")?.addEventListener("click", (event) => {
     const item = event.target.closest("[data-archive-image-index]");
     if (item) openArchiveImage(Number(item.dataset.archiveImageIndex));
@@ -398,9 +358,7 @@ function installArchiveUi() {
 
   document.querySelector('.nav-item[data-route="archive"]')?.addEventListener("click", () => {
     const currentState = history.state && typeof history.state === "object" ? history.state : {};
-    if (!currentState[ARCHIVE_HISTORY_KEY]) {
-      history.pushState({ ...currentState, [ARCHIVE_HISTORY_KEY]: true }, "", location.href);
-    }
+    if (!currentState[ARCHIVE_HISTORY_KEY]) history.pushState({ ...currentState, [ARCHIVE_HISTORY_KEY]: true }, "", location.href);
     activateArchive();
   });
 
@@ -418,40 +376,20 @@ function installArchiveUi() {
 
   document.querySelector("#closeImageViewerButton")?.addEventListener("click", (event) => {
     if (!archiveViewerHistoryActive) return;
-    event.preventDefault();
-    event.stopImmediatePropagation();
-    history.back();
+    event.preventDefault(); event.stopImmediatePropagation(); history.back();
   }, { capture: true });
-
   imageViewerDialog?.addEventListener("cancel", (event) => {
     if (!archiveViewerHistoryActive) return;
-    event.preventDefault();
-    event.stopImmediatePropagation();
-    history.back();
+    event.preventDefault(); event.stopImmediatePropagation(); history.back();
   }, { capture: true });
-
-  imageViewerDialog?.addEventListener("close", () => {
-    archiveViewerHistoryActive = false;
-  });
-
-  window.addEventListener("popstate", (event) => {
-    if (event.state?.[ARCHIVE_HISTORY_KEY]) {
-      activateArchive();
-    } else {
-      deactivateArchive();
-    }
-  });
+  imageViewerDialog?.addEventListener("close", () => { archiveViewerHistoryActive = false; });
+  window.addEventListener("popstate", (event) => { if (event.state?.[ARCHIVE_HISTORY_KEY]) activateArchive(); else deactivateArchive(); });
 
   if (promptList) {
-    const observer = new MutationObserver(() => {
-      arrangePromptCardMeta();
-      scheduleArchiveRefresh();
-    });
+    const observer = new MutationObserver(() => { arrangePromptCardMeta(); scheduleArchiveRefresh(); });
     observer.observe(promptList, { childList: true, subtree: true });
   }
-
   arrangePromptCardMeta();
-  scheduleArchiveRefresh();
 }
 
 installVersionMetadata();
