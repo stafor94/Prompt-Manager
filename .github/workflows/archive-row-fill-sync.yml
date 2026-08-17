@@ -1,0 +1,40 @@
+name: Archive Row Fill Sync
+
+on:
+  push:
+    branches:
+      - fix/archive-row-fill-1.5.6
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/archive-row-fill-1.5.6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Apply patch
+        run: node tools/archive_row_fill_patch.mjs
+      - name: Verify changed JavaScript
+        run: |
+          node --check archive-pagination-core.mjs
+          node --check ui-enhancements.js
+          node --check archive-six-columns.js
+          node --check release-notes.js
+          node --check version-display.js
+          node --check sw.js
+      - name: Run tests
+        run: node --test
+      - name: Commit patch
+        run: |
+          git rm .github/workflows/archive-row-fill-sync.yml tools/archive_row_fill_patch.mjs
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Release 1.5.6 archive row fill alignment"
+          git push origin HEAD:fix/archive-row-fill-1.5.6
