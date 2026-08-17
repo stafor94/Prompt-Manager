@@ -15,26 +15,16 @@ test("1장 뷰어는 제목과 해상도·비율을 표시하고 파일명은 �
   assert.match(source, /viewerDialog\.dataset\.archiveViewerLayout !== "DUAL"/);
   assert.match(source, /document\.querySelector\("#detailTitle"\)/);
   assert.match(source, /queueMicrotask\(renderSingleViewerCaption\)/);
-
   assert.equal(
-    buildViewerCaption(
-      { promptTitle: "샘플 제목", imageName: "secret-file.png" },
-      0,
-      3,
-      "1080×1920(9:16)",
-    ),
+    buildViewerCaption({ promptTitle: "샘플 제목", imageName: "secret-file.png" }, 0, 3, "1080×1920(9:16)"),
     "1 / 3 · 샘플 제목 · 1080×1920(9:16)",
   );
 });
 
 test("기본 이미지 열기 경로도 캡션에 파일명을 넣지 않는다", async () => {
-  const [app, archiveUi] = await Promise.all([
-    read("app.js"),
-    read("ui-enhancements.js"),
-  ]);
+  const [app, archiveUi] = await Promise.all([read("app.js"), read("ui-enhancements.js")]);
   const detailViewer = app.match(/function openImageViewer\([\s\S]*?\n}/)?.[0] ?? "";
   const archiveViewer = archiveUi.match(/function openArchiveImage\([\s\S]*?\n}/)?.[0] ?? "";
-
   assert.ok(detailViewer, "상세 이미지 열기 함수를 찾을 수 없습니다.");
   assert.ok(archiveViewer, "보관함 이미지 열기 함수를 찾을 수 없습니다.");
   assert.doesNotMatch(detailViewer, /imageViewerCaption\.textContent[^\n]*image\.name/);
@@ -57,5 +47,5 @@ test("2장 뷰어는 좌우 해상도·비율을 하이픈 형식으로 표시�
 test("이미지 메타데이터 모듈은 오프라인 앱 셸에 포함된다", async () => {
   const sw = await read("sw.js");
   assert.match(sw, /\.\/image-metadata\.mjs/);
-  assert.match(sw, /prompt-manager-shell-v45|prompt-manager-shell-v46/);
+  assert.match(sw, /prompt-manager-shell-v47/);
 });

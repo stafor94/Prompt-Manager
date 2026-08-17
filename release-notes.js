@@ -1,15 +1,15 @@
 import { parseReleaseNotes } from "./release-notes-core.mjs";
 
-const APP_VERSION = "1.5.2";
+const APP_VERSION = "1.5.3";
 const CHANGELOG_URL = `./CHANGELOG.md?v=${APP_VERSION}`;
 const FALLBACK_CHANGELOG = `
-## [1.5.2] - 2026-08-08
+## [1.5.3] - 2026-08-17
 
-### 수정
+### 성능
 
-- 이미지 해상도와 비율 표기를 \`1080×1920(9:16)\` 형식으로 간결하게 변경했습니다.
-- 2장보기에서는 좌우 메타 정보를 \`왼쪽-1080×1920(9:16)\`, \`오른쪽-720×1080(2:3)\` 형식으로 표시합니다.
-- 파일명 미표시와 제목 표시 방식은 기존 동작을 유지합니다.
+- 프롬프트 목록은 첨부 이미지 본문을 읽지 않는 경량 메타데이터 저장소를 사용하도록 변경했습니다.
+- 보관함 이미지는 보관함 탭을 열 때만 읽고, 다른 탭으로 이동하면 이미지 DOM과 메모리 참조를 해제합니다.
+- 보관함 LLM 필터는 IndexedDB를 다시 읽지 않고 현재 렌더링된 이미지 메타데이터만 사용합니다.
 `;
 
 function ensureStylesheet() {
@@ -26,9 +26,7 @@ function createDialog() {
   dialog.id = "releaseNotesDialog";
   dialog.className = "dialog release-notes-dialog";
   dialog.setAttribute("aria-labelledby", "releaseNotesHeading");
-
   const article = document.createElement("article");
-
   const header = document.createElement("div");
   header.className = "dialog-header";
   const headingBox = document.createElement("div");
@@ -39,7 +37,6 @@ function createDialog() {
   heading.id = "releaseNotesHeading";
   heading.textContent = "릴리즈 노트";
   headingBox.append(eyebrow, heading);
-
   const headerCloseButton = document.createElement("button");
   headerCloseButton.type = "button";
   headerCloseButton.className = "icon-button";
@@ -63,7 +60,6 @@ function createDialog() {
   closeButton.className = "filled-button";
   closeButton.textContent = "닫기";
   actions.append(closeButton);
-
   article.append(header, content, actions);
   dialog.append(article);
 
@@ -73,7 +69,6 @@ function createDialog() {
   dialog.addEventListener("click", (event) => {
     if (event.target === dialog) close();
   });
-
   return { dialog, status, list };
 }
 
@@ -81,14 +76,12 @@ function createReleaseItem(release, index) {
   const details = document.createElement("details");
   details.className = "release-note-item";
   details.open = index === 0;
-
   const summary = document.createElement("summary");
   const version = document.createElement("strong");
   version.textContent = release.version === "미출시" ? release.version : `v${release.version}`;
   const date = document.createElement("span");
   date.textContent = release.date;
   summary.append(version, date);
-
   const body = document.createElement("div");
   body.className = "release-note-body";
 
@@ -98,27 +91,22 @@ function createReleaseItem(release, index) {
     const heading = document.createElement("h3");
     heading.textContent = group.title;
     const items = document.createElement("ul");
-
     for (const item of group.items) {
       const listItem = document.createElement("li");
       listItem.textContent = item;
       items.append(listItem);
     }
-
     section.append(heading, items);
     body.append(section);
   }
-
   details.append(summary, body);
   return details;
 }
 
 async function loadReleaseNotes(status, list) {
   if (list.dataset.loaded === "true") return;
-
   let markdown = FALLBACK_CHANGELOG;
   let usedFallback = false;
-
   try {
     const response = await fetch(CHANGELOG_URL);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -126,16 +114,13 @@ async function loadReleaseNotes(status, list) {
   } catch {
     usedFallback = true;
   }
-
   const releases = parseReleaseNotes(markdown);
   list.replaceChildren(...releases.map(createReleaseItem));
   list.dataset.loaded = "true";
-
   if (releases.length === 0) {
     status.textContent = "표시할 릴리즈 노트가 없습니다.";
     return;
   }
-
   status.textContent = usedFallback
     ? `현재 버전 v${APP_VERSION}의 릴리즈 노트입니다.`
     : `최신 버전부터 총 ${releases.length}개 버전을 표시합니다.`;
@@ -144,10 +129,8 @@ async function loadReleaseNotes(status, list) {
 function installReleaseNotes() {
   const aboutCard = document.querySelector('[aria-labelledby="aboutHeading"]');
   if (!aboutCard || aboutCard.dataset.releaseNotesInstalled === "true") return;
-
   aboutCard.dataset.releaseNotesInstalled = "true";
   ensureStylesheet();
-
   const buttonRow = document.createElement("div");
   buttonRow.className = "release-notes-actions";
   const openButton = document.createElement("button");
@@ -156,10 +139,8 @@ function installReleaseNotes() {
   openButton.textContent = "릴리즈 노트 보기";
   buttonRow.append(openButton);
   aboutCard.append(buttonRow);
-
   const { dialog, status, list } = createDialog();
   document.body.append(dialog);
-
   openButton.addEventListener("click", async () => {
     dialog.showModal();
     await loadReleaseNotes(status, list);
@@ -167,9 +148,6 @@ function installReleaseNotes() {
 }
 
 if (typeof document !== "undefined") {
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", installReleaseNotes, { once: true });
-  } else {
-    installReleaseNotes();
-  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", installReleaseNotes, { once: true });
+  else installReleaseNotes();
 }
