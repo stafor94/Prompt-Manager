@@ -3,7 +3,7 @@ import { getAllPromptRecords, getAllPromptSummaries, getPromptRecord, putPromptR
 import { MAX_TAGS, TAG_MAX_LENGTH, buildPromptDedupKey, createBackupZip, normalizeTags, parseBackupZip, parseLegacyJsonBackup } from "./prompt-organization-backup-core.mjs";
 import { collectTagOptions, matchesPromptQuery } from "./prompt-tag-core.mjs";
 
-const APP_VERSION = "1.5.3";
+const APP_VERSION = "1.5.4";
 const TAG_FILTER_KEY = "prompt-manager-tag-filter";
 const ACTIVE_LLM_STORAGE_KEY = "prompt-manager-active-llms";
 const LLM_TYPES = ["CHATGPT", "GEMINI", "GROK", "CLAUDE"];

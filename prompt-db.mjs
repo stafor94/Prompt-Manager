@@ -129,6 +129,18 @@ export async function getPromptRecord(id) {
   return requestToPromise(transaction.objectStore(PROMPT_STORE).get(id));
 }
 
+export async function getPromptRecords(ids) {
+  const normalizedIds = [...new Set(ids)].filter(Number.isInteger);
+  if (normalizedIds.length === 0) return [];
+
+  const db = await openPromptDatabase();
+  const transaction = db.transaction(PROMPT_STORE, "readonly");
+  const store = transaction.objectStore(PROMPT_STORE);
+  const requests = normalizedIds.map((id) => requestToPromise(store.get(id)));
+  const records = await Promise.all(requests);
+  return records.filter(Boolean);
+}
+
 export async function putPromptRecord(prompt) {
   const db = await openPromptDatabase();
   const transaction = db.transaction([PROMPT_STORE, SUMMARY_STORE], "readwrite");

@@ -1,15 +1,15 @@
 import { parseReleaseNotes } from "./release-notes-core.mjs";
 
-const APP_VERSION = "1.5.3";
+const APP_VERSION = "1.5.4";
 const CHANGELOG_URL = `./CHANGELOG.md?v=${APP_VERSION}`;
 const FALLBACK_CHANGELOG = `
-## [1.5.3] - 2026-08-17
+## [1.5.4] - 2026-08-17
 
 ### 성능
 
-- 프롬프트 목록은 첨부 이미지 본문을 읽지 않는 경량 메타데이터 저장소를 사용하도록 변경했습니다.
-- 보관함 이미지는 보관함 탭을 열 때만 읽고, 다른 탭으로 이동하면 이미지 DOM과 메모리 참조를 해제합니다.
-- 보관함 LLM 필터는 IndexedDB를 다시 읽지 않고 현재 렌더링된 이미지 메타데이터만 사용합니다.
+- 보관함은 경량 프롬프트 요약만 먼저 읽고 첫 이미지 묶음만 로드하도록 변경했습니다.
+- 목록 끝에서 위로 밀거나 마우스 휠을 더 내리면 다음 이미지 묶음을 추가로 읽습니다.
+- 보관함 LLM 필터 변경 시 선택된 LLM의 이미지 데이터만 다시 점진적으로 로드합니다.
 `;
 
 function ensureStylesheet() {

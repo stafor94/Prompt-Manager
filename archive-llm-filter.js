@@ -59,6 +59,8 @@ function applyArchiveLlmFilter() {
     group.hidden = !group.querySelector("[data-archive-image-index]:not([hidden])");
   });
 
+  if (grid.dataset.lazyArchive === "true") return;
+
   const totalImageCount = items.length;
   const allTypesActive = activeArchiveLlmTypes.size === ARCHIVE_LLM_TYPES.length;
   count.textContent = allTypesActive
@@ -82,6 +84,12 @@ function applyArchiveLlmFilter() {
 function scheduleArchiveFilterRefresh() {
   clearTimeout(refreshTimer);
   refreshTimer = setTimeout(applyArchiveLlmFilter, 0);
+}
+
+function notifyArchiveFilterChange() {
+  window.dispatchEvent(new CustomEvent("prompt-manager:archive-llm-filter-change", {
+    detail: { activeTypes: [...activeArchiveLlmTypes] },
+  }));
 }
 
 function createArchiveLlmFilter() {
@@ -110,6 +118,7 @@ function createArchiveLlmFilter() {
       saveActiveArchiveLlmTypes();
       renderArchiveLlmButtons();
       applyArchiveLlmFilter();
+      notifyArchiveFilterChange();
     });
   });
 
