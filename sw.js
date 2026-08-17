@@ -1,49 +1,50 @@
-const CACHE_NAME = "prompt-manager-shell-v46";
+const CACHE_NAME = "prompt-manager-shell-v47";
 const APP_SHELL = [
   "./",
   "./index.html",
-  "./styles.css?v=1.5.2",
-  "./fixes.css?v=1.5.2",
-  "./detail-layout.css?v=1.5.2",
-  "./archive-grouping.css?v=1.5.2",
-  "./image-viewer-fit.css?v=1.5.2",
-  "./tag-ui-fixes.css?v=1.5.2",
-  "./favorite-editor-ui.css?v=1.5.2",
-  "./app.js?v=1.5.2",
-  "./card-favorite.js?v=1.5.2",
+  "./styles.css?v=1.5.3",
+  "./fixes.css?v=1.5.3",
+  "./detail-layout.css?v=1.5.3",
+  "./archive-grouping.css?v=1.5.3",
+  "./image-viewer-fit.css?v=1.5.3",
+  "./tag-ui-fixes.css?v=1.5.3",
+  "./favorite-editor-ui.css?v=1.5.3",
+  "./app.js?v=1.5.3",
+  "./prompt-db.mjs",
+  "./card-favorite.js?v=1.5.3",
   "./card-favorite-core.mjs",
   "./prompt-version.mjs",
-  "./llm-filter.js?v=1.5.2",
-  "./editor-tools.js?v=1.5.2",
+  "./llm-filter.js?v=1.5.3",
+  "./editor-tools.js?v=1.5.3",
   "./editor-title-extractor.mjs",
-  "./navigation.js?v=1.5.2",
-  "./ui-enhancements.js?v=1.5.2",
-  "./archive-llm-filter.js?v=1.5.2",
-  "./update-manager.js?v=1.5.2",
-  "./version-display.js?v=1.5.2",
-  "./library-controls.js?v=1.5.2",
-  "./library-controls.css?v=1.5.2",
-  "./archive-six-columns.js?v=1.5.2",
-  "./archive-six-columns.css?v=1.5.2",
-  "./archive-viewer-layout.js?v=1.5.2",
+  "./navigation.js?v=1.5.3",
+  "./ui-enhancements.js?v=1.5.3",
+  "./archive-llm-filter.js?v=1.5.3",
+  "./update-manager.js?v=1.5.3",
+  "./version-display.js?v=1.5.3",
+  "./library-controls.js?v=1.5.3",
+  "./library-controls.css?v=1.5.3",
+  "./archive-six-columns.js?v=1.5.3",
+  "./archive-six-columns.css?v=1.5.3",
+  "./archive-viewer-layout.js?v=1.5.3",
   "./archive-viewer-layout-core.mjs",
-  "./archive-viewer-layout.css?v=1.5.2",
-  "./image-navigation.js?v=1.5.2",
+  "./archive-viewer-layout.css?v=1.5.3",
+  "./image-navigation.js?v=1.5.3",
   "./image-metadata.mjs",
-  "./image-viewer-fit.js?v=1.5.2",
+  "./image-viewer-fit.js?v=1.5.3",
   "./image-viewer-fit-core.mjs",
-  "./tab-persistence.js?v=1.5.2",
-  "./storage-summary.js?v=1.5.2",
+  "./tab-persistence.js?v=1.5.3",
+  "./storage-summary.js?v=1.5.3",
   "./storage-quota.mjs",
-  "./release-notes.js?v=1.5.2",
+  "./release-notes.js?v=1.5.3",
   "./release-notes-core.mjs",
-  "./release-notes.css?v=1.5.2",
-  "./CHANGELOG.md?v=1.5.2",
-  "./prompt-organization-backup.js?v=1.5.2",
+  "./release-notes.css?v=1.5.3",
+  "./CHANGELOG.md?v=1.5.3",
+  "./prompt-organization-backup.js?v=1.5.3",
   "./prompt-organization-backup-core.mjs",
-  "./prompt-organization-backup.css?v=1.5.2",
+  "./prompt-organization-backup.css?v=1.5.3",
   "./prompt-tag-core.mjs",
-  "./manifest.webmanifest?v=1.5.2",
+  "./manifest.webmanifest?v=1.5.3",
   "./icons/icon.svg",
   "./icons/icon-maskable.svg",
   "./icons/llm-chatgpt.svg",
@@ -112,17 +113,11 @@ self.addEventListener("fetch", (event) => {
     .has(event.request.destination);
 
   if (networkFirst) {
-    event.respondWith(
-      fetchAndCache(event.request)
-        .catch(() => caches.match(event.request))
-    );
+    event.respondWith(fetchAndCache(event.request).catch(() => caches.match(event.request)));
     return;
   }
 
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      if (cached) return cached;
-      return fetchAndCache(event.request);
-    })
+    caches.match(event.request).then((cached) => cached || fetchAndCache(event.request))
   );
 });
