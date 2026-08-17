@@ -1,13 +1,9 @@
-const APP_VERSION = "1.5.2";
+const APP_VERSION = "1.5.3";
 const ARCHIVE_COLUMNS_KEY = "prompt-manager-archive-columns";
 const SIX_COLUMNS_KEY = "prompt-manager-archive-six-columns";
 
 function readSixColumnPreference() {
-  try {
-    return localStorage.getItem(SIX_COLUMNS_KEY) === "true";
-  } catch {
-    return false;
-  }
+  try { return localStorage.getItem(SIX_COLUMNS_KEY) === "true"; } catch { return false; }
 }
 
 function writeSixColumnPreference(enabled) {
@@ -35,7 +31,6 @@ function installStylesheet() {
 function applyArchiveColumns(columns) {
   const grid = document.querySelector("#imageArchiveGrid");
   if (!grid) return;
-
   grid.dataset.columns = columns;
   document.querySelectorAll("[data-archive-columns]").forEach((button) => {
     const active = button.dataset.archiveColumns === columns;
@@ -47,7 +42,6 @@ function applyArchiveColumns(columns) {
 function createSixColumnButton(controls) {
   let button = controls.querySelector('[data-archive-columns="6"]');
   if (button) return button;
-
   button = document.createElement("button");
   button.className = "archive-view-button";
   button.type = "button";
@@ -62,25 +56,17 @@ function createSixColumnButton(controls) {
 function initArchiveSixColumns() {
   const controls = document.querySelector(".archive-view-controls");
   if (!controls || controls.dataset.sixColumnsInstalled === "true") return false;
-
   controls.dataset.sixColumnsInstalled = "true";
   const sixColumnButton = createSixColumnButton(controls);
-
   sixColumnButton.addEventListener("click", () => {
     writeSixColumnPreference(true);
     applyArchiveColumns("6");
   });
-
-  controls.querySelectorAll('[data-archive-columns]:not([data-archive-columns="6"])')
-    .forEach((button) => {
-      button.addEventListener("click", () => {
-        writeSixColumnPreference(false);
-      });
-    });
-
-  if (readSixColumnPreference()) {
-    applyArchiveColumns("6");
-  } else {
+  controls.querySelectorAll('[data-archive-columns]:not([data-archive-columns="6"])').forEach((button) => {
+    button.addEventListener("click", () => writeSixColumnPreference(false));
+  });
+  if (readSixColumnPreference()) applyArchiveColumns("6");
+  else {
     sixColumnButton.classList.remove("active");
     sixColumnButton.setAttribute("aria-pressed", "false");
   }
@@ -89,12 +75,10 @@ function initArchiveSixColumns() {
 
 function waitForArchiveControls() {
   if (initArchiveSixColumns()) return;
-
   const observer = new MutationObserver(() => {
     if (initArchiveSixColumns()) observer.disconnect();
   });
   observer.observe(document.documentElement, { childList: true, subtree: true });
-
   window.addEventListener("load", () => {
     if (initArchiveSixColumns()) observer.disconnect();
   }, { once: true });
