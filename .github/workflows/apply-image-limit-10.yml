@@ -1,0 +1,42 @@
+name: Apply image attachment limit 10
+
+on:
+  push:
+    branches:
+      - feature/image-attachment-limit-10
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: feature/image-attachment-limit-10
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Apply implementation
+        run: python scripts/apply-image-limit-10.py
+      - name: Check JavaScript syntax
+        shell: bash
+        run: |
+          while IFS= read -r -d '' file; do
+            node --check "$file"
+          done < <(find . -maxdepth 1 -type f \( -name '*.js' -o -name '*.mjs' \) -print0)
+      - name: Run tests
+        run: node --test
+      - name: Commit implementation
+        shell: bash
+        run: |
+          rm -f scripts/apply-image-limit-10.py .github/workflows/apply-image-limit-10.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "feat: allow 10 prompt images"
+          git push origin HEAD:feature/image-attachment-limit-10
