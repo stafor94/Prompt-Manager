@@ -47,5 +47,5 @@ test("2장 뷰어는 좌우 해상도·비율을 하이픈 형식으로 표시�
 test("이미지 메타데이터 모듈은 오프라인 앱 셸에 포함된다", async () => {
   const sw = await read("sw.js");
   assert.match(sw, /\.\/image-metadata\.mjs/);
-  assert.match(sw, /prompt-manager-shell-v50/);
+  assert.match(sw, /prompt-manager-shell-v51/);
 });

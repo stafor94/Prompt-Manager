@@ -6,27 +6,32 @@ import {
 } from "./prompt-version.mjs";
 import {
   deletePromptRecord,
+  getAllCustomLlmRecords,
   getAllPromptRecords,
   getAllPromptSummaries,
   getPromptRecord,
+  putCustomLlmRecord,
   putPromptRecord,
   restorePromptRecords,
 } from "./prompt-db.mjs";
+import {
+  CUSTOM_LLM_NAME_MAX_LENGTH,
+  createCustomLlmRecord,
+  getLlmDefinitions,
+  getLlmLabel,
+  isKnownLlmType,
+  mergeCustomLlms,
+  normalizeCustomLlms,
+} from "./llm-registry.mjs";
 
-const BACKUP_SCHEMA_VERSION = 2;
-const SUPPORTED_BACKUP_SCHEMA_VERSIONS = new Set([1, 2]);
+const BACKUP_SCHEMA_VERSION = 3;
+const SUPPORTED_BACKUP_SCHEMA_VERSIONS = new Set([1, 2, 3]);
 const TITLE_MAX_LENGTH = 50;
 const MAX_IMAGES = 5;
-const LLM_LABELS = {
-  CHATGPT: "ChatGPT",
-  GEMINI: "Gemini",
-  GROK: "Grok",
-  CLAUDE: "Claude",
-};
-const VALID_LLM_TYPES = new Set(Object.keys(LLM_LABELS));
 
 const state = {
   prompts: [],
+  customLlms: [],
   activePromptId: null,
   editingPromptId: null,
   editorSnapshot: null,
@@ -97,6 +102,11 @@ const elements = {
   restoreFileInput: document.querySelector("#restoreFileInput"),
   storageSummary: document.querySelector("#storageSummary"),
   persistStorageButton: document.querySelector("#persistStorageButton"),
+  customLlmForm: document.querySelector("#customLlmForm"),
+  customLlmNameInput: document.querySelector("#customLlmNameInput"),
+  customLlmNameCount: document.querySelector("#customLlmNameCount"),
+  customLlmList: document.querySelector("#customLlmList"),
+  supportedLlmsValue: document.querySelector("#supportedLlmsValue"),
   snackbar: document.querySelector("#snackbar"),
 };
 
@@ -149,6 +159,65 @@ function formatDate(timestamp) {
 
 function getCharacterLength(value) {
   return [...value].length;
+}
+
+function updateCustomLlmNameCount() {
+  if (!elements.customLlmNameInput || !elements.customLlmNameCount) return;
+  const length = getCharacterLength(elements.customLlmNameInput.value);
+  elements.customLlmNameCount.textContent = `${length} / ${CUSTOM_LLM_NAME_MAX_LENGTH}자`;
+}
+
+function renderLlmConfiguration() {
+  const definitions = getLlmDefinitions(state.customLlms);
+  if (elements.promptLlm) {
+    const previous = elements.promptLlm.value;
+    const options = definitions.map(({ type, label }) => {
+      const option = document.createElement("option");
+      option.value = type;
+      option.textContent = label;
+      return option;
+    });
+    elements.promptLlm.replaceChildren(...options);
+    if (definitions.some(({ type }) => type === previous)) elements.promptLlm.value = previous;
+  }
+
+  if (elements.customLlmList) {
+    if (state.customLlms.length === 0) {
+      const empty = document.createElement("p");
+      empty.className = "supporting-text custom-llm-empty";
+      empty.textContent = "추가한 LLM이 없습니다.";
+      elements.customLlmList.replaceChildren(empty);
+    } else {
+      elements.customLlmList.replaceChildren(...state.customLlms.map(({ name }) => {
+        const chip = document.createElement("span");
+        chip.className = "custom-llm-chip";
+        chip.textContent = name;
+        return chip;
+      }));
+    }
+  }
+  if (elements.supportedLlmsValue) {
+    elements.supportedLlmsValue.textContent = definitions.map(({ label }) => label).join(" · ");
+  }
+  updateCustomLlmNameCount();
+}
+
+async function refreshCustomLlms() {
+  state.customLlms = normalizeCustomLlms(await getAllCustomLlmRecords());
+  renderLlmConfiguration();
+}
+
+async function addCustomLlm(event) {
+  event.preventDefault();
+  if (!elements.customLlmNameInput) return;
+  const record = createCustomLlmRecord(elements.customLlmNameInput.value, state.customLlms);
+  await putCustomLlmRecord(record);
+  elements.customLlmNameInput.value = "";
+  await refreshCustomLlms();
+  window.dispatchEvent(new CustomEvent("prompt-manager:llms-changed", {
+    detail: { customLlms: state.customLlms.map((item) => ({ ...item })) },
+  }));
+  showSnackbar(`${record.name} LLM을 추가했습니다.`);
 }
 
 function createImageId() {
@@ -247,7 +316,7 @@ function renderPromptList() {
     return `
       <button class="prompt-card" type="button" data-prompt-id="${prompt.id}">
         <div class="prompt-card-header">
-          <span class="llm-badge" data-llm="${prompt.llmType}">${LLM_LABELS[prompt.llmType] ?? prompt.llmType}</span>
+          <span class="llm-badge" data-llm="${escapeHtml(prompt.llmType)}">${escapeHtml(getLlmLabel(prompt.llmType, state.customLlms))}</span>
           <span class="favorite-mark" aria-label="${prompt.isFavorite ? "즐겨찾기" : "일반"}">${prompt.isFavorite ? "★" : ""}</span>
         </div>
         <h3>${escapeHtml(prompt.title)}</h3>
@@ -365,7 +434,7 @@ async function submitPrompt(event) {
   const title = elements.promptTitleInput.value;
   const content = elements.promptContentInput.value;
   const llmType = elements.promptLlm.value;
-  if (!VALID_LLM_TYPES.has(llmType)) {
+  if (!isKnownLlmType(llmType, state.customLlms)) {
     showSnackbar("LLM 종류를 선택하세요.");
     return;
   }
@@ -437,7 +506,7 @@ async function openDetail(id) {
     return;
   }
   state.activePromptId = prompt.id;
-  elements.detailLlm.textContent = LLM_LABELS[prompt.llmType] ?? prompt.llmType;
+  elements.detailLlm.textContent = getLlmLabel(prompt.llmType, state.customLlms);
   elements.detailLlm.dataset.llm = prompt.llmType;
   elements.detailTitle.textContent = prompt.title;
   if (elements.detailVersion) elements.detailVersion.textContent = `v${getPromptVersion(prompt)}`;
@@ -542,10 +611,13 @@ function validateBackup(data) {
     throw new Error(`지원하지 않는 schemaVersion입니다: ${data.schemaVersion}`);
   }
   if (!Array.isArray(data.prompts)) throw new Error("prompts 배열이 없습니다.");
-  return data.prompts.map((prompt, index) => {
+  const customLlms = data.schemaVersion >= 3
+    ? normalizeCustomLlms(data.customLlms ?? [], { strict: true })
+    : [];
+  const prompts = data.prompts.map((prompt, index) => {
     const fail = (reason) => { throw new Error(`${index + 1}번째 프롬프트: ${reason}`); };
     if (!prompt || typeof prompt !== "object") fail("객체가 아닙니다.");
-    if (!VALID_LLM_TYPES.has(prompt.llmType)) fail("LLM 종류가 올바르지 않습니다.");
+    if (!isKnownLlmType(prompt.llmType, customLlms)) fail("LLM 종류가 올바르지 않습니다.");
     if (typeof prompt.title !== "string" || !prompt.title.trim()) fail("제목이 없습니다.");
     if (getCharacterLength(prompt.title) > TITLE_MAX_LENGTH) fail(`제목은 ${TITLE_MAX_LENGTH}자까지 허용됩니다.`);
     if (typeof prompt.content !== "string" || !prompt.content.trim()) fail("본문이 없습니다.");
@@ -565,6 +637,7 @@ function validateBackup(data) {
       isFavorite: prompt.isFavorite,
     };
   });
+  return { customLlms, prompts };
 }
 
 async function exportBackup() {
@@ -572,6 +645,7 @@ async function exportBackup() {
   const backup = {
     schemaVersion: BACKUP_SCHEMA_VERSION,
     exportedAt: Date.now(),
+    customLlms: normalizeCustomLlms(state.customLlms, { strict: true }),
     prompts: prompts.map(({ id, ...prompt }) => ({
       ...prompt,
       images: cloneImages(prompt.images),
@@ -596,7 +670,8 @@ async function restoreBackup(file) {
   } catch {
     throw new Error("JSON을 해석할 수 없습니다.");
   }
-  const incoming = validateBackup(parsed);
+  const validated = validateBackup(parsed);
+  const incoming = validated.prompts;
   const mode = elements.restoreMode.value;
   if (mode === "REPLACE" && !confirm(`기존 ${state.prompts.length}개 데이터를 삭제하고 ${incoming.length}개로 교체할까요?`)) return;
 
@@ -611,8 +686,19 @@ async function restoreBackup(file) {
     });
   }
 
-  await restorePromptRecords(candidates, { replace: mode === "REPLACE" });
+  const customLlms = mode === "REPLACE"
+    ? validated.customLlms
+    : mergeCustomLlms(state.customLlms, validated.customLlms);
+  await restorePromptRecords(candidates, {
+    replace: mode === "REPLACE",
+    customLlms,
+    replaceCustomLlms: true,
+  });
+  await refreshCustomLlms();
   await refreshPrompts();
+  window.dispatchEvent(new CustomEvent("prompt-manager:llms-changed", {
+    detail: { customLlms: state.customLlms.map((item) => ({ ...item })) },
+  }));
   showSnackbar(`${candidates.length}개 프롬프트를 복원했습니다.`);
 }
 
@@ -799,6 +885,8 @@ function bindEvents() {
     elements.restoreFileInput.value = "";
     if (file) await restoreBackup(file).catch(handleError);
   });
+  elements.customLlmNameInput?.addEventListener("input", updateCustomLlmNameCount);
+  elements.customLlmForm?.addEventListener("submit", (event) => addCustomLlm(event).catch(handleError));
   document.querySelectorAll('input[name="theme"]').forEach((radio) => {
     radio.addEventListener("change", () => {
       localStorage.setItem("prompt-vault-theme", radio.value);
@@ -859,6 +947,7 @@ async function registerServiceWorker() {
 async function init() {
   const theme = localStorage.getItem("prompt-vault-theme") ?? "system";
   applyTheme(theme);
+  await refreshCustomLlms();
   renderEditorImages();
   bindEvents();
   const route = location.hash.slice(1);

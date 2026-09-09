@@ -4,21 +4,21 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#6750a4">
-  <meta name="description" content="ChatGPT, Gemini, Grok, Claude 프롬프트를 기기 안에 저장하고 관리하는 오프라인 PWA">
+  <meta name="description" content="여러 LLM의 프롬프트를 기기 안에 저장하고 관리하는 오프라인 PWA">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="프롬프트 매니저">
   <title>Prompt Manager</title>
-  <link rel="manifest" href="./manifest.webmanifest?v=1.5.6">
+  <link rel="manifest" href="./manifest.webmanifest?v=1.6.0">
   <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="./icons/icon.svg">
-  <link rel="stylesheet" href="./styles.css?v=1.5.6">
-  <link rel="stylesheet" href="./fixes.css?v=1.5.6">
-  <link rel="stylesheet" href="./detail-layout.css?v=1.5.6">
-  <link rel="stylesheet" href="./archive-grouping.css?v=1.5.6" data-archive-grouping-style>
-  <link rel="stylesheet" href="./image-viewer-fit.css?v=1.5.6">
-  <link rel="stylesheet" href="./tag-ui-fixes.css?v=1.5.6">
-  <link rel="stylesheet" href="./favorite-editor-ui.css?v=1.5.6">
+  <link rel="stylesheet" href="./styles.css?v=1.6.0">
+  <link rel="stylesheet" href="./fixes.css?v=1.6.0">
+  <link rel="stylesheet" href="./detail-layout.css?v=1.6.0">
+  <link rel="stylesheet" href="./archive-grouping.css?v=1.6.0" data-archive-grouping-style>
+  <link rel="stylesheet" href="./image-viewer-fit.css?v=1.6.0">
+  <link rel="stylesheet" href="./tag-ui-fixes.css?v=1.6.0">
+  <link rel="stylesheet" href="./favorite-editor-ui.css?v=1.6.0">
 </head>
 <body>
   <div class="app-shell">
@@ -27,7 +27,7 @@
         <p class="eyebrow">Prompt Manager</p>
         <div class="app-title-row">
           <h1>프롬프트 매니저</h1>
-          <span class="app-version-badge" aria-label="앱 버전 1.5.6">v1.5.6</span>
+          <span class="app-version-badge" aria-label="앱 버전 1.6.0">v1.6.0</span>
         </div>
       </div>
       <button id="installButton" class="icon-button hidden" type="button" aria-label="앱 설치" title="앱 설치">↓</button>
@@ -107,6 +107,22 @@
             </div>
           </section>
 
+          <section class="card" aria-labelledby="llmSettingsHeading">
+            <h3 id="llmSettingsHeading">LLM</h3>
+            <p class="supporting-text">기본 LLM 외에 직접 사용할 LLM을 추가할 수 있습니다. 이름은 10자까지 입력할 수 있습니다.</p>
+            <form id="customLlmForm" class="custom-llm-form">
+              <label for="customLlmNameInput">
+                <span>LLM 이름</span>
+                <input id="customLlmNameInput" type="text" autocomplete="off" maxlength="10" placeholder="예: Perplexity" required>
+              </label>
+              <div class="custom-llm-form-row">
+                <small id="customLlmNameCount">0 / 10자</small>
+                <button class="filled-button" type="submit">추가</button>
+              </div>
+            </form>
+            <div id="customLlmList" class="custom-llm-list" aria-live="polite"></div>
+          </section>
+
           <section class="card" aria-labelledby="backupHeading">
             <h3 id="backupHeading">백업 및 복원</h3>
             <p class="supporting-text">첨부 이미지를 포함한 JSON 백업 파일을 정기적으로 보관하세요.</p>
@@ -134,8 +150,8 @@
           <section class="card" aria-labelledby="aboutHeading">
             <h3 id="aboutHeading">앱 정보</h3>
             <dl class="info-list">
-              <div><dt>버전</dt><dd>v1.5.6</dd></div>
-              <div><dt>지원 LLM</dt><dd>ChatGPT · Gemini · Grok · Claude</dd></div>
+              <div><dt>버전</dt><dd>v1.6.0</dd></div>
+              <div><dt>지원 LLM</dt><dd id="supportedLlmsValue">ChatGPT · Gemini · Grok · Claude</dd></div>
               <div><dt>네트워크 전송</dt><dd>없음</dd></div>
               <div><dt>데이터 위치</dt><dd>현재 기기 브라우저</dd></div>
             </dl>
@@ -252,14 +268,14 @@
   </dialog>
 
   <div id="snackbar" class="snackbar" role="status" aria-live="polite"></div>
-  <script type="module" src="./update-manager.js?v=1.5.6"></script>
-  <script type="module" src="./app.js?v=1.5.6"></script>
-  <script type="module" src="./card-favorite.js?v=1.5.6"></script>
-  <script type="module" src="./llm-filter.js?v=1.5.6"></script>
-  <script type="module" src="./editor-tools.js?v=1.5.6"></script>
-  <script type="module" src="./navigation.js?v=1.5.6"></script>
-  <script type="module" src="./ui-enhancements.js?v=1.5.6"></script>
-  <script type="module" src="./archive-llm-filter.js?v=1.5.6"></script>
-  <script src="./version-display.js?v=1.5.6"></script>
+  <script type="module" src="./update-manager.js?v=1.6.0"></script>
+  <script type="module" src="./app.js?v=1.6.0"></script>
+  <script type="module" src="./card-favorite.js?v=1.6.0"></script>
+  <script type="module" src="./llm-filter.js?v=1.6.0"></script>
+  <script type="module" src="./editor-tools.js?v=1.6.0"></script>
+  <script type="module" src="./navigation.js?v=1.6.0"></script>
+  <script type="module" src="./ui-enhancements.js?v=1.6.0"></script>
+  <script type="module" src="./archive-llm-filter.js?v=1.6.0"></script>
+  <script src="./version-display.js?v=1.6.0"></script>
 </body>
 </html>
