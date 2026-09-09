@@ -51,7 +51,10 @@ p.write_text(text.replace(marker, entry, 1))
 
 # Update test expectations to current release.
 for p in Path('test').glob('*.test.mjs'):
-    text = p.read_text().replace('1.7.0', '1.8.0').replace('prompt-manager-shell-v52', 'prompt-manager-shell-v53')
+    text = p.read_text()
+    text = text.replace('1.7.0', '1.8.0')
+    text = text.replace('1\\.7\\.0', '1\\.8\\.0')
+    text = text.replace('prompt-manager-shell-v52', 'prompt-manager-shell-v53')
     p.write_text(text)
 
 # Image limit regression test: 12 accepted, 13 rejected.
