@@ -6,7 +6,7 @@ export const MAX_TAGS = 20;
 export const TAG_MAX_LENGTH = 30;
 export const COLLECTION_MAX_LENGTH = 40;
 export const TITLE_MAX_LENGTH = 50;
-export const MAX_IMAGES = 5;
+export const MAX_IMAGES = 10;
 export const VALID_LLM_TYPES = new Set(BUILTIN_LLMS.map(({ type }) => type));
 
 const textEncoder = new TextEncoder();
