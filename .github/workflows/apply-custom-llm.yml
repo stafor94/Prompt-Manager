@@ -32,6 +32,10 @@ jobs:
               'updated, count = re.subn(pattern, replacement, text, count=1, flags=flags)',
               'updated, count = re.subn(pattern, lambda _match: replacement, text, count=1, flags=flags)',
           )
+          source = source.replace(
+              '''replace_once("prompt-organization-backup.js", '${LLM_LABELS[prompt.llmType]??escapeHtml(prompt.llmType)}', '${escapeHtml(llmLabel(prompt.llmType))}')''',
+              '''replace_once("prompt-organization-backup.js", 'LLM_LABELS[prompt.llmType]??escapeHtml(prompt.llmType)', 'escapeHtml(llmLabel(prompt.llmType))')''',
+          )
           path.write_text(source, encoding='utf-8')
           PY
           python scripts/apply-custom-llm.py
