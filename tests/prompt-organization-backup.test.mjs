@@ -11,6 +11,7 @@ import {
   parseBackupZip,
   parseLegacyJsonBackup,
 } from "../prompt-organization-backup-core.mjs";
+import { createCustomLlmRecord } from "../llm-registry.mjs";
 
 const samplePrompt = {
   llmType: "CHATGPT",
@@ -59,7 +60,7 @@ test("ZIP 백업은 이미지 파일을 분리하고 프롬프트를 복원한�
   assert.ok([...files.keys()].some((name) => name.startsWith("images/")));
 
   const restored = parseBackupZip(zip);
-  assert.equal(restored.manifest.schemaVersion, 3);
+  assert.equal(restored.manifest.schemaVersion, 4);
   assert.equal(restored.manifest.imageCount, 1);
   assert.deepEqual(restored.prompts[0], samplePrompt);
 });
@@ -93,12 +94,23 @@ test("손상된 ZIP 데이터는 체크섬 검증에서 거부한다", () => {
 });
 
 test("기존 JSON 백업도 컬렉션과 태그를 포함해 복원한다", () => {
-  const prompts = parseLegacyJsonBackup({ schemaVersion: 2, prompts: [samplePrompt] });
-  assert.deepEqual(prompts[0], samplePrompt);
+  const restored = parseLegacyJsonBackup({ schemaVersion: 2, prompts: [samplePrompt] });
+  assert.deepEqual(restored.prompts[0], samplePrompt);
+  assert.deepEqual(restored.customLlms, []);
 });
 
 test("중복 기준은 LLM, 제목, 본문만 사용한다", () => {
   const first = buildPromptDedupKey(samplePrompt);
   const second = buildPromptDedupKey({ ...samplePrompt, collection: "다른 컬렉션", tags: ["다른 태그"] });
   assert.equal(first, second);
+});
+
+
+test("사용자 정의 LLM 정의와 프롬프트를 ZIP 백업에서 함께 왕복한다", () => {
+  const customLlm = createCustomLlmRecord("Perplexity");
+  const customPrompt = { ...samplePrompt, llmType: customLlm.id, title: "사용자 LLM" };
+  const zip = createBackupZip([customPrompt], { customLlms: [customLlm] });
+  const restored = parseBackupZip(zip);
+  assert.deepEqual(restored.customLlms, [customLlm]);
+  assert.deepEqual(restored.prompts[0], customPrompt);
 });

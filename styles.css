@@ -259,6 +259,38 @@ small { color: var(--on-surface-variant); font-weight: 500; }
 .info-list dt { color: var(--on-surface-variant); }
 .info-list dd { margin: 0; text-align: right; }
 
+.custom-llm-form {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+.custom-llm-form-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+}
+.custom-llm-form-row .filled-button { min-width: 88px; }
+.custom-llm-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+.custom-llm-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 5px 11px;
+  border-radius: 999px;
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+  font-size: .86rem;
+  font-weight: 750;
+}
+.custom-llm-empty { width: 100%; }
+.llm-badge[data-llm^="CUSTOM:"]::before { content: "+ · "; }
+
 .snackbar {
   position: fixed;
   left: 50%;
@@ -300,6 +332,8 @@ small { color: var(--on-surface-variant); font-weight: 500; }
 }
 
 @media (max-width: 520px) {
+  .custom-llm-form-row { grid-template-columns: 1fr; align-items: stretch; }
+  .custom-llm-form-row .filled-button { width: 100%; }
   .screen-heading { align-items: stretch; flex-direction: column; }
   .screen-heading .filled-button { width: 100%; }
   .dialog {

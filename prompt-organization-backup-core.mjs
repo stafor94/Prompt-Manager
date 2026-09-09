@@ -1,11 +1,13 @@
+import { BUILTIN_LLMS, isKnownLlmType, normalizeCustomLlms } from "./llm-registry.mjs";
+
 export const BACKUP_FORMAT = "prompt-manager-backup";
-export const BACKUP_SCHEMA_VERSION = 3;
+export const BACKUP_SCHEMA_VERSION = 4;
 export const MAX_TAGS = 20;
 export const TAG_MAX_LENGTH = 30;
 export const COLLECTION_MAX_LENGTH = 40;
 export const TITLE_MAX_LENGTH = 50;
 export const MAX_IMAGES = 5;
-export const VALID_LLM_TYPES = new Set(["CHATGPT", "GEMINI", "GROK", "CLAUDE"]);
+export const VALID_LLM_TYPES = new Set(BUILTIN_LLMS.map(({ type }) => type));
 
 const textEncoder = new TextEncoder();
 const textDecoder = new TextDecoder("utf-8", { fatal: true });
@@ -258,10 +260,10 @@ function parseJsonBytes(bytes, label) {
   }
 }
 
-function validatePromptBase(prompt, index) {
+function validatePromptBase(prompt, index, customLlms = []) {
   const fail = (reason) => { throw new Error(`${index + 1}번째 프롬프트: ${reason}`); };
   if (!prompt || typeof prompt !== "object" || Array.isArray(prompt)) fail("객체가 아닙니다.");
-  if (!VALID_LLM_TYPES.has(prompt.llmType)) fail("LLM 종류가 올바르지 않습니다.");
+  if (!isKnownLlmType(prompt.llmType, customLlms)) fail("LLM 종류가 올바르지 않습니다.");
   if (typeof prompt.title !== "string" || !prompt.title.trim()) fail("제목이 없습니다.");
   if ([...prompt.title].length > TITLE_MAX_LENGTH) fail(`제목은 ${TITLE_MAX_LENGTH}자까지 허용됩니다.`);
   if (typeof prompt.content !== "string" || !prompt.content.trim()) fail("본문이 없습니다.");
@@ -286,14 +288,15 @@ function validatePromptBase(prompt, index) {
   };
 }
 
-export function createBackupZip(prompts, { appVersion = "0.0.0", exportedAt = Date.now() } = {}) {
+export function createBackupZip(prompts, { appVersion = "0.0.0", exportedAt = Date.now(), customLlms = [] } = {}) {
   if (!Array.isArray(prompts)) throw new Error("백업할 프롬프트 목록이 올바르지 않습니다.");
+  const normalizedCustomLlms = normalizeCustomLlms(customLlms, { strict: true });
   const entries = [];
   const promptRecords = [];
   let imageCount = 0;
 
   prompts.forEach((source, promptIndex) => {
-    const base = validatePromptBase(source, promptIndex);
+    const base = validatePromptBase(source, promptIndex, normalizedCustomLlms);
     const images = Array.isArray(source.images) ? source.images : [];
     if (images.length > MAX_IMAGES) throw new Error(`${promptIndex + 1}번째 프롬프트: 이미지는 최대 ${MAX_IMAGES}장까지 허용됩니다.`);
     const imageRecords = images.map((image, imageIndex) => {
@@ -313,7 +316,7 @@ export function createBackupZip(prompts, { appVersion = "0.0.0", exportedAt = Da
     promptRecords.push({ ...base, images: imageRecords });
   });
 
-  const promptsBytes = jsonBytes({ prompts: promptRecords });
+  const promptsBytes = jsonBytes({ customLlms: normalizedCustomLlms, prompts: promptRecords });
   entries.unshift({ name: "prompts.json", data: promptsBytes });
   const fileMetadata = entries.map((entry) => ({
     path: entry.name,
@@ -326,6 +329,7 @@ export function createBackupZip(prompts, { appVersion = "0.0.0", exportedAt = Da
     appVersion,
     exportedAt,
     promptCount: promptRecords.length,
+    customLlmCount: normalizedCustomLlms.length,
     imageCount,
     files: fileMetadata,
   };
@@ -340,7 +344,7 @@ export function parseBackupZip(input) {
   if (!manifestBytes || !promptsBytes) throw new Error("manifest.json 또는 prompts.json이 없습니다.");
   const manifest = parseJsonBytes(manifestBytes, "manifest.json");
   if (manifest?.format !== BACKUP_FORMAT) throw new Error("Prompt Manager 백업 파일이 아닙니다.");
-  if (manifest.schemaVersion !== BACKUP_SCHEMA_VERSION) throw new Error(`지원하지 않는 schemaVersion입니다: ${manifest.schemaVersion}`);
+  if (![3, BACKUP_SCHEMA_VERSION].includes(manifest.schemaVersion)) throw new Error(`지원하지 않는 schemaVersion입니다: ${manifest.schemaVersion}`);
   if (!Array.isArray(manifest.files)) throw new Error("백업 파일 목록이 없습니다.");
   for (const file of manifest.files) {
     if (!file || typeof file.path !== "string" || !Number.isInteger(file.byteLength) || typeof file.crc32 !== "string") {
@@ -356,8 +360,11 @@ export function parseBackupZip(input) {
 
   const parsed = parseJsonBytes(promptsBytes, "prompts.json");
   if (!Array.isArray(parsed?.prompts)) throw new Error("prompts 배열이 없습니다.");
+  const customLlms = manifest.schemaVersion >= 4
+    ? normalizeCustomLlms(parsed.customLlms ?? [], { strict: true })
+    : [];
   const prompts = parsed.prompts.map((prompt, index) => {
-    const base = validatePromptBase(prompt, index);
+    const base = validatePromptBase(prompt, index, customLlms);
     const imageRecords = prompt.images === undefined ? [] : prompt.images;
     if (!Array.isArray(imageRecords) || imageRecords.length > MAX_IMAGES) {
       throw new Error(`${index + 1}번째 프롬프트: 이미지 목록이 올바르지 않습니다.`);
@@ -378,17 +385,21 @@ export function parseBackupZip(input) {
     return { ...base, images };
   });
   if (manifest.promptCount !== prompts.length) throw new Error("매니페스트의 프롬프트 수가 일치하지 않습니다.");
+  if (manifest.schemaVersion >= 4 && manifest.customLlmCount !== customLlms.length) throw new Error("매니페스트의 사용자 정의 LLM 수가 일치하지 않습니다.");
   const imageCount = prompts.reduce((sum, prompt) => sum + prompt.images.length, 0);
   if (manifest.imageCount !== imageCount) throw new Error("매니페스트의 이미지 수가 일치하지 않습니다.");
-  return { manifest, prompts };
+  return { manifest, prompts, customLlms };
 }
 
 export function parseLegacyJsonBackup(data) {
   if (!data || typeof data !== "object" || Array.isArray(data)) throw new Error("백업 파일 형식이 올바르지 않습니다.");
-  if (![1, 2].includes(data.schemaVersion)) throw new Error(`지원하지 않는 schemaVersion입니다: ${data.schemaVersion}`);
+  if (![1, 2, 3].includes(data.schemaVersion)) throw new Error(`지원하지 않는 schemaVersion입니다: ${data.schemaVersion}`);
   if (!Array.isArray(data.prompts)) throw new Error("prompts 배열이 없습니다.");
-  return data.prompts.map((prompt, index) => {
-    const base = validatePromptBase(prompt, index);
+  const customLlms = data.schemaVersion >= 3
+    ? normalizeCustomLlms(data.customLlms ?? [], { strict: true })
+    : [];
+  const prompts = data.prompts.map((prompt, index) => {
+    const base = validatePromptBase(prompt, index, customLlms);
     const imageRecords = prompt.images === undefined ? [] : prompt.images;
     if (!Array.isArray(imageRecords) || imageRecords.length > MAX_IMAGES) {
       throw new Error(`${index + 1}번째 프롬프트: 이미지 목록이 올바르지 않습니다.`);
@@ -407,4 +418,5 @@ export function parseLegacyJsonBackup(data) {
     });
     return { ...base, images };
   });
+  return { prompts, customLlms };
 }

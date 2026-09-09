@@ -6,14 +6,14 @@ import {
   takeArchiveSummaryBatch,
 } from "./archive-pagination-core.mjs";
 
-const APP_VERSION = "1.5.6";
+const APP_VERSION = "1.6.0";
 const ARCHIVE_COLUMNS_KEY = "prompt-manager-archive-columns";
 const ARCHIVE_MODE_KEY = "prompt-manager-archive-mode";
 const ARCHIVE_HISTORY_KEY = "promptManagerArchive";
 const ARCHIVE_LLM_FILTER_KEY = "prompt-manager-archive-active-llms";
 const ARCHIVE_COLUMN_OPTIONS = new Set(["2", "3", "4", "6"]);
 const ARCHIVE_MODE_OPTIONS = new Set(["ALL", "GROUPED"]);
-const ARCHIVE_LLM_TYPES = ["CHATGPT", "GEMINI", "GROK", "CLAUDE"];
+const ARCHIVE_BUILTIN_LLM_TYPES = ["CHATGPT", "GEMINI", "GROK", "CLAUDE"];
 const ARCHIVE_PULL_THRESHOLD = 36;
 
 const addPromptButton = document.querySelector("#addPromptButton");
@@ -72,12 +72,21 @@ function saveArchiveMode(mode) {
   }
 }
 
+function readKnownArchiveLlmTypes() {
+  const rendered = [...document.querySelectorAll("[data-archive-llm-filter]")]
+    .map((button) => button.dataset.archiveLlmFilter)
+    .filter(Boolean);
+  return rendered.length > 0 ? rendered : ARCHIVE_BUILTIN_LLM_TYPES;
+}
+
 function readActiveArchiveLlmTypes() {
-  const fallback = new Set(ARCHIVE_LLM_TYPES);
+  const knownTypes = readKnownArchiveLlmTypes();
+  const fallback = new Set(knownTypes);
   try {
     const saved = JSON.parse(localStorage.getItem(ARCHIVE_LLM_FILTER_KEY));
     if (!Array.isArray(saved)) return fallback;
-    return new Set(saved.filter((type) => ARCHIVE_LLM_TYPES.includes(type)));
+    const validTypes = new Set(knownTypes);
+    return new Set(saved.filter((type) => validTypes.has(type)));
   } catch {
     return fallback;
   }
@@ -345,7 +354,7 @@ function updateArchiveUi() {
   empty.classList.toggle("hidden", hasImages);
   if (!hasImages) {
     const activeTypes = readActiveArchiveLlmTypes();
-    const filtered = activeTypes.size !== ARCHIVE_LLM_TYPES.length;
+    const filtered = activeTypes.size !== readKnownArchiveLlmTypes().length;
     const strong = empty.querySelector("strong");
     const description = empty.querySelector("p");
     if (strong) strong.textContent = filtered ? "선택한 LLM의 이미지가 없습니다." : "첨부된 이미지가 없습니다.";

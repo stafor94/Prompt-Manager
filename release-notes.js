@@ -1,8 +1,16 @@
 import { parseReleaseNotes } from "./release-notes-core.mjs";
 
-const APP_VERSION = "1.5.6";
+const APP_VERSION = "1.6.0";
 const CHANGELOG_URL = `./CHANGELOG.md?v=${APP_VERSION}`;
 const FALLBACK_CHANGELOG = `
+## [1.6.0] - 2026-09-09
+
+### 추가
+
+- 설정에서 이름 10자 이하의 사용자 정의 LLM을 추가할 수 있습니다.
+- 추가한 LLM은 프롬프트 편집, 필터, 보관함, 백업 및 복원에서 기본 LLM과 동일하게 동작합니다.
+- 사용자 정의 LLM은 IndexedDB에 저장되며 기존 백업 형식은 계속 복원할 수 있습니다.
+
 ## [1.5.6] - 2026-08-17
 
 ### 수정

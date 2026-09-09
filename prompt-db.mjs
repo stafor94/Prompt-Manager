@@ -1,7 +1,8 @@
 const DB_NAME = "prompt-vault";
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 const PROMPT_STORE = "prompts";
 const SUMMARY_STORE = "promptSummaries";
+const CUSTOM_LLM_STORE = "customLlms";
 
 let dbPromise;
 
@@ -87,6 +88,9 @@ export function openPromptDatabase() {
         createSummaryStore(db);
         rebuildSummaries(request.transaction);
       }
+      if (!db.objectStoreNames.contains(CUSTOM_LLM_STORE)) {
+        db.createObjectStore(CUSTOM_LLM_STORE, { keyPath: "id" });
+      }
     };
 
     request.onsuccess = () => {
@@ -120,6 +124,19 @@ export async function getAllPromptRecords() {
   const db = await openPromptDatabase();
   const transaction = db.transaction(PROMPT_STORE, "readonly");
   return requestToPromise(transaction.objectStore(PROMPT_STORE).getAll());
+}
+
+export async function getAllCustomLlmRecords() {
+  const db = await openPromptDatabase();
+  const transaction = db.transaction(CUSTOM_LLM_STORE, "readonly");
+  return requestToPromise(transaction.objectStore(CUSTOM_LLM_STORE).getAll());
+}
+
+export async function putCustomLlmRecord(record) {
+  const db = await openPromptDatabase();
+  const transaction = db.transaction(CUSTOM_LLM_STORE, "readwrite");
+  transaction.objectStore(CUSTOM_LLM_STORE).put(record);
+  await transactionDone(transaction);
 }
 
 export async function getPromptRecord(id) {
@@ -167,16 +184,24 @@ export async function deletePromptRecord(id) {
   await transactionDone(transaction);
 }
 
-export async function restorePromptRecords(records, { replace = false } = {}) {
+export async function restorePromptRecords(records, {
+  replace = false,
+  customLlms,
+  replaceCustomLlms = false,
+} = {}) {
   const db = await openPromptDatabase();
-  const transaction = db.transaction([PROMPT_STORE, SUMMARY_STORE], "readwrite");
+  const includeCustomLlms = Array.isArray(customLlms) || replaceCustomLlms;
+  const storeNames = [PROMPT_STORE, SUMMARY_STORE, ...(includeCustomLlms ? [CUSTOM_LLM_STORE] : [])];
+  const transaction = db.transaction(storeNames, "readwrite");
   const promptStore = transaction.objectStore(PROMPT_STORE);
   const summaryStore = transaction.objectStore(SUMMARY_STORE);
+  const customLlmStore = includeCustomLlms ? transaction.objectStore(CUSTOM_LLM_STORE) : null;
 
   if (replace) {
     promptStore.clear();
     summaryStore.clear();
   }
+  if (replaceCustomLlms) customLlmStore?.clear();
 
   for (const prompt of records) {
     const request = promptStore.add(prompt);
@@ -184,6 +209,10 @@ export async function restorePromptRecords(records, { replace = false } = {}) {
       summaryStore.put(buildPromptSummary({ ...prompt, id: request.result }));
     };
     request.onerror = () => transaction.abort();
+  }
+
+  if (customLlmStore && Array.isArray(customLlms)) {
+    for (const customLlm of customLlms) customLlmStore.put(customLlm);
   }
 
   await transactionDone(transaction);

@@ -1,7 +1,5 @@
 const HOME_ROUTE = "library";
 const LAST_NEW_PROMPT_LLM_KEY = "prompt-manager-last-new-prompt-llm";
-const VALID_LLM_TYPES = new Set(["CHATGPT", "GEMINI", "GROK", "CLAUDE"]);
-
 const editorDialog = document.querySelector("#editorDialog");
 const detailDialog = document.querySelector("#detailDialog");
 const closeEditorButton = document.querySelector("#closeEditorButton");
@@ -20,17 +18,21 @@ let openingNewPrompt = false;
 let newPromptSession = false;
 let editorToolSnackbarTimer = null;
 
+function hasPromptLlmType(llmType) {
+  return Boolean(promptLlm && [...promptLlm.options].some((option) => option.value === llmType));
+}
+
 function readLastNewPromptLlm(fallback) {
   try {
     const stored = localStorage.getItem(LAST_NEW_PROMPT_LLM_KEY);
-    return VALID_LLM_TYPES.has(stored) ? stored : fallback;
+    return hasPromptLlmType(stored) ? stored : fallback;
   } catch {
     return fallback;
   }
 }
 
 function storeLastNewPromptLlm(llmType) {
-  if (!VALID_LLM_TYPES.has(llmType)) return;
+  if (!hasPromptLlmType(llmType)) return;
   try {
     localStorage.setItem(LAST_NEW_PROMPT_LLM_KEY, llmType);
   } catch {
