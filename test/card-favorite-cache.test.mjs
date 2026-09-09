@@ -6,12 +6,12 @@ async function read(path) {
   return readFile(new URL(`../${path}`, import.meta.url), "utf8");
 }
 
-test("즐겨찾기 카드 자산은 1.7.0 앱 셸에 포함된다", async () => {
+test("즐겨찾기 카드 자산은 1.8.0 앱 셸에 포함된다", async () => {
   const sw = await read("sw.js");
-  assert.match(sw, /prompt-manager-shell-v52/);
-  assert.match(sw, /\.\/card-favorite\.js\?v=1\.7\.0/);
+  assert.match(sw, /prompt-manager-shell-v53/);
+  assert.match(sw, /\.\/card-favorite\.js\?v=1\.8\.0/);
   assert.match(sw, /\.\/card-favorite-core\.mjs/);
   assert.match(sw, /\.\/prompt-db\.mjs/);
   assert.match(sw, /\.\/archive-pagination-core\.mjs/);
-  assert.match(sw, /\.\/favorite-editor-ui\.css\?v=1\.7\.0/);
+  assert.match(sw, /\.\/favorite-editor-ui\.css\?v=1\.8\.0/);
 });

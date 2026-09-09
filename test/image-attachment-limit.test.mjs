@@ -24,27 +24,27 @@ function promptWithImages(count) {
   };
 }
 
-test("편집기와 백업 검증은 이미지 최대 10장 기준을 사용한다", async () => {
+test("편집기와 백업 검증은 이미지 최대 12장 기준을 사용한다", async () => {
   const [app, index, backup] = await Promise.all([
     read("app.js"),
     read("index.html"),
     read("prompt-organization-backup-core.mjs"),
   ]);
-  assert.match(app, /const MAX_IMAGES = 10;/);
-  assert.match(backup, /export const MAX_IMAGES = 10;/);
-  assert.match(index, /id="editorImageCount">0 \/ 10장/);
-  assert.match(index, /이미지를 최대 10장까지 첨부할 수 있습니다\./);
+  assert.match(app, /const MAX_IMAGES = 12;/);
+  assert.match(backup, /export const MAX_IMAGES = 12;/);
+  assert.match(index, /id="editorImageCount">0 \/ 12장/);
+  assert.match(index, /이미지를 최대 12장까지 첨부할 수 있습니다\./);
 });
 
-test("10장 이미지는 ZIP 백업에서 왕복하고 11장은 거부한다", () => {
-  const zip = createBackupZip([promptWithImages(10)], {
-    appVersion: "1.7.0",
+test("12장 이미지는 ZIP 백업에서 왕복하고 13장은 거부한다", () => {
+  const zip = createBackupZip([promptWithImages(12)], {
+    appVersion: "1.8.0",
     exportedAt: 1,
   });
   const parsed = parseBackupZip(zip);
-  assert.equal(parsed.prompts[0].images.length, 10);
+  assert.equal(parsed.prompts[0].images.length, 12);
   assert.throws(
-    () => createBackupZip([promptWithImages(11)], { appVersion: "1.7.0", exportedAt: 1 }),
-    /이미지는 최대 10장까지 허용됩니다/,
+    () => createBackupZip([promptWithImages(13)], { appVersion: "1.8.0", exportedAt: 1 }),
+    /이미지는 최대 12장까지 허용됩니다/,
   );
 });
