@@ -39,6 +39,26 @@ jobs:
           path.write_text(source, encoding='utf-8')
           PY
           python scripts/apply-custom-llm.py
+      - name: Align version regression tests
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          for name in [
+              'test/card-favorite-cache.test.mjs',
+              'test/image-viewer-metadata-ui.test.mjs',
+              'test/update-cache-tag-ui.test.mjs',
+          ]:
+              path = Path(name)
+              text = path.read_text(encoding='utf-8')
+              text = text.replace('1.5.6', '1.6.0').replace(r'1\.5\.6', r'1\.6\.0').replace('v50', 'v51')
+              path.write_text(text, encoding='utf-8')
+
+          path = Path('test/version-1.6.0-assets.test.mjs')
+          text = path.read_text(encoding='utf-8')
+          text = text.replace('2026-08-17', '2026-09-09').replace('약 24장 단위', '사용자 정의 LLM')
+          path.write_text(text, encoding='utf-8')
+          PY
       - name: Check JavaScript syntax
         shell: bash
         run: |
