@@ -1,8 +1,15 @@
 import { parseReleaseNotes } from "./release-notes-core.mjs";
 
-const APP_VERSION = "1.6.0";
+const APP_VERSION = "1.7.0";
 const CHANGELOG_URL = `./CHANGELOG.md?v=${APP_VERSION}`;
 const FALLBACK_CHANGELOG = `
+## [1.7.0] - 2026-09-09
+
+### 변경
+
+- 프롬프트 하나에 첨부할 수 있는 이미지 수를 최대 5장에서 10장으로 늘렸습니다.
+- 편집기와 백업·복원에서 동일한 10장 제한을 적용합니다.
+
 ## [1.6.0] - 2026-09-09
 
 ### 추가

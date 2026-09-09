@@ -27,7 +27,7 @@ import {
 const BACKUP_SCHEMA_VERSION = 3;
 const SUPPORTED_BACKUP_SCHEMA_VERSIONS = new Set([1, 2, 3]);
 const TITLE_MAX_LENGTH = 50;
-const MAX_IMAGES = 5;
+const MAX_IMAGES = 10;
 
 const state = {
   prompts: [],

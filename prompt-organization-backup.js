@@ -4,7 +4,7 @@ import { MAX_TAGS, TAG_MAX_LENGTH, buildPromptDedupKey, createBackupZip, normali
 import { collectTagOptions, matchesPromptQuery } from "./prompt-tag-core.mjs";
 import { getLlmDefinitions, getLlmLabel, mergeCustomLlms, normalizeCustomLlms } from "./llm-registry.mjs";
 
-const APP_VERSION = "1.6.0";
+const APP_VERSION = "1.7.0";
 const TAG_FILTER_KEY = "prompt-manager-tag-filter";
 const ACTIVE_LLM_STORAGE_KEY = "prompt-manager-active-llms";
 const state = { selectedPromptId:null, editorMode:"new", editorTargetId:null, editorSourceId:null, editorTags:[], editorSnapshot:"", editorBaseUpdatedAt:null, promptMutationOwned:false, renderScheduled:false, prompts:[], customLlms:[], llmDefinitions:[], selectedTag:localStorage.getItem(TAG_FILTER_KEY) ?? "", snackbarTimer:null };
