@@ -150,11 +150,13 @@ if anchor not in text:
     raise SystemExit("changelog anchor missing")
 p.write_text(text.replace(anchor, entry, 1))
 
-# Keep existing current-version regression expectations aligned.
+# Keep existing current-version regression expectations aligned, including regex literals.
 for p in Path("test").glob("*.mjs"):
     text = p.read_text()
-    if "1.10.0" in text:
-        p.write_text(text.replace("1.10.0", "1.10.1"))
+    text = text.replace("1.10.0", "1.10.1")
+    text = text.replace(r"1\.10\.0", r"1\.10\.1")
+    text = text.replace("prompt-manager-shell-v55", "prompt-manager-shell-v56")
+    p.write_text(text)
 old_version_test = Path("test/version-1.10.0-assets.test.mjs")
 new_version_test = Path("test/version-1.10.1-assets.test.mjs")
 if old_version_test.exists():
