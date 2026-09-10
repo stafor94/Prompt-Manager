@@ -53,6 +53,7 @@ p.write_text(text.replace(marker, entry, 1))
 for p in Path('test').glob('*.test.mjs'):
     text = p.read_text().replace('1.8.0', '1.9.0').replace('prompt-manager-shell-v53', 'prompt-manager-shell-v54')
     text = text.replace(r'1\.8\.0', r'1\.9\.0')
+    text = text.replace(r'1\.9\.0\] - 2026-09-09', r'1\.9\.0\] - 2026-09-10')
     p.write_text(text)
 
 # Image limit regression test: 20 accepted, 21 rejected.
