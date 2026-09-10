@@ -46,7 +46,7 @@ p.write_text(text.replace(old, new, 1))
 # Keep the image limit regression aligned with the duplicate-without-images helper.
 p = Path("test/image-attachment-limit.test.mjs")
 text = p.read_text()
-anchor = '  assert.match(core, /export const MAX_IMAGES = 20;/);\n'
+anchor = '  assert.match(backup, /export const MAX_IMAGES = 20;/);\n'
 if anchor not in text:
     raise SystemExit("image limit test anchor missing")
 text = text.replace(
