@@ -19,10 +19,10 @@ test("설정과 편집기 및 필터가 사용자 정의 LLM 레지스트리에 
   assert.match(organization, /customLlms:state\.customLlms/);
 });
 
-test("1.10.0 정적 자산과 LLM 레지스트리가 새 Service Worker 캐시에 포함된다", async () => {
+test("1.10.1 정적 자산과 LLM 레지스트리가 새 Service Worker 캐시에 포함된다", async () => {
   const [index, sw, changelog] = await Promise.all([read("index.html"), read("sw.js"), read("CHANGELOG.md")]);
-  assert.match(index, /v1\.10\.0/);
-  assert.match(sw, /prompt-manager-shell-v55/);
+  assert.match(index, /v1\.10\.1/);
+  assert.match(sw, /prompt-manager-shell-v56/);
   assert.match(sw, /\.\/llm-registry\.mjs/);
-  assert.match(changelog, /## \[1\.10\.0\] - 2026-09-11/);
+  assert.match(changelog, /## \[1\.10\.1\] - 2026-09-11/);
 });

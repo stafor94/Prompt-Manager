@@ -1,8 +1,15 @@
 import { parseReleaseNotes } from "./release-notes-core.mjs";
 
-const APP_VERSION = "1.10.0";
+const APP_VERSION = "1.10.1";
 const CHANGELOG_URL = `./CHANGELOG.md?v=${APP_VERSION}`;
 const FALLBACK_CHANGELOG = `
+## [1.10.1] - 2026-09-11
+
+### 변경
+
+- 확대 이미지 뷰어의 하단 이미지 정보는 화면을 한 번 누르거나 이미지가 이동했을 때만 3초 동안 표시되고 페이드아웃됩니다.
+- 이미지를 확대해 보는 동안에는 하단 이미지 정보를 숨깁니다.
+
 ## [1.10.0] - 2026-09-11
 
 ### 추가

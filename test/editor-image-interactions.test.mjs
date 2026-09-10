@@ -62,6 +62,6 @@ test("편집기 이미지 클릭은 공용 상세 이미지 뷰어와 탐색 컨
 
 test("새 정렬 코어는 오프라인 앱 셸에 포함된다", async () => {
   const sw = await read("sw.js");
-  assert.match(sw, /prompt-manager-shell-v55/);
+  assert.match(sw, /prompt-manager-shell-v56/);
   assert.match(sw, /\.\/editor-image-order\.mjs/);
 });
