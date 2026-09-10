@@ -637,6 +637,13 @@ async function openDetail(id) {
 function updateViewerTransform() {
   const { scale, x, y } = state.viewerTransform;
   elements.imageViewerImage.style.transform = `translate3d(${x}px, ${y}px, 0) scale(${scale})`;
+  const zoomed = scale > 1.001;
+  elements.imageViewerDialog.dataset.viewerZoomed = String(zoomed);
+  if (zoomed) {
+    elements.imageViewerCaption.classList.remove("is-visible");
+    elements.imageViewerCaption.setAttribute("aria-hidden", "true");
+    document.dispatchEvent(new CustomEvent("prompt-manager:image-viewer-caption-hide"));
+  }
 }
 
 function resetViewerTransform() {
@@ -669,6 +676,8 @@ function openImageViewer(images, index, title) {
   elements.imageViewerImage.alt = image.name;
   const captionTitle = String(title || "첨부 이미지").trim() || "첨부 이미지";
   elements.imageViewerCaption.textContent = `${index + 1} / ${sourceImages.length} · ${captionTitle}`;
+  elements.imageViewerCaption.classList.remove("is-visible");
+  elements.imageViewerCaption.setAttribute("aria-hidden", "true");
   resetViewerTransform();
   elements.imageViewerDialog.showModal();
   history.pushState({ ...(history.state ?? {}), promptManagerImageViewer: true }, "", location.href);

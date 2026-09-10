@@ -8,18 +8,23 @@ import {
 } from "./archive-viewer-layout-core.mjs";
 import { formatImageMetadata } from "./image-metadata.mjs";
 
-const APP_VERSION = "1.10.0";
+const APP_VERSION = "1.10.1";
 const ARCHIVE_VIEWER_LAYOUT_KEY = "prompt-manager-archive-viewer-layout";
 const DUAL_VIEWER_HISTORY_KEY = "promptManagerDualArchiveViewer";
 const ARCHIVE_VIEWER_HISTORY_KEY = "promptManagerArchiveViewer";
 const SWIPE_THRESHOLD = 56;
 const HORIZONTAL_DOMINANCE_RATIO = 1.2;
+const VIEWER_CAPTION_REVEAL_EVENT = "prompt-manager:image-viewer-caption-reveal";
 
 let archiveViewerLayout = readArchiveViewerLayout();
 let dualContext = null;
 let dualGesture = null;
 let secondaryImage = null;
 let dualViewerHistoryActive = false;
+
+function revealViewerCaptionTemporarily() {
+  document.dispatchEvent(new CustomEvent(VIEWER_CAPTION_REVEAL_EVENT));
+}
 
 function readArchiveViewerLayout() {
   try { return normalizeArchiveViewerLayout(localStorage.getItem(ARCHIVE_VIEWER_LAYOUT_KEY)); }
@@ -201,7 +206,11 @@ function showDualPair(startIndex) {
 
 function openDualViewer() {
   const viewerDialog = document.querySelector("#imageViewerDialog");
+  const viewerCaption = document.querySelector("#imageViewerCaption");
   if (!dualContext || !viewerDialog || viewerDialog.open) return false;
+  viewerDialog.dataset.viewerZoomed = "false";
+  viewerCaption?.classList.remove("is-visible");
+  viewerCaption?.setAttribute("aria-hidden", "true");
   showDualPair(dualContext.clickedIndex);
   const currentState = history.state && typeof history.state === "object" ? history.state : {};
   history.pushState({
@@ -219,6 +228,7 @@ function moveDualPair(direction) {
   const nextStart = resolveAdjacentDualPairStart(dualContext.pairStart, dualContext.items.length, direction);
   if (nextStart === dualContext.pairStart) return;
   showDualPair(nextStart);
+  revealViewerCaptionTemporarily();
 }
 
 function isDualViewerActive() {
@@ -275,6 +285,7 @@ function bindDualViewerEvents() {
     const deltaX = event.clientX - dualGesture.startX;
     const deltaY = event.clientY - dualGesture.startY;
     dualGesture = null;
+    revealViewerCaptionTemporarily();
     if (Math.abs(deltaX) < SWIPE_THRESHOLD) return;
     if (Math.abs(deltaX) <= Math.abs(deltaY) * HORIZONTAL_DOMINANCE_RATIO) return;
     moveDualPair(deltaX < 0 ? 1 : -1);

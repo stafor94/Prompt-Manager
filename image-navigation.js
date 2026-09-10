@@ -7,6 +7,9 @@ const EDGE_RESISTANCE = 0.28;
 const SWIPE_ANIMATION_MS = 220;
 const SNAP_BACK_ANIMATION_MS = 180;
 const SWIPE_EASING = "cubic-bezier(0.22, 1, 0.36, 1)";
+export const VIEWER_CAPTION_VISIBLE_MS = 3000;
+const VIEWER_CAPTION_REVEAL_EVENT = "prompt-manager:image-viewer-caption-reveal";
+const VIEWER_CAPTION_HIDE_EVENT = "prompt-manager:image-viewer-caption-hide";
 
 export function getSwipeDirection(startX, startY, endX, endY, threshold = DEFAULT_SWIPE_THRESHOLD) {
   const deltaX = endX - startX;
@@ -60,6 +63,7 @@ function installImageNavigation() {
   let animationFrame = null;
   let pendingDuplicateWithoutImages = false;
   let duplicateResetTimer = null;
+  let captionHideTimer = null;
 
   viewerImage.style.gridArea = "1 / 1";
 
@@ -133,6 +137,24 @@ function installImageNavigation() {
     return viewerDialog.dataset.archiveViewerLayout !== "DUAL";
   }
 
+  function hideViewerCaption() {
+    clearTimeout(captionHideTimer);
+    captionHideTimer = null;
+    viewerCaption.classList.remove("is-visible");
+    viewerCaption.setAttribute("aria-hidden", "true");
+  }
+
+  function revealViewerCaption() {
+    if (!viewerDialog.open || viewerDialog.dataset.viewerZoomed === "true") {
+      hideViewerCaption();
+      return;
+    }
+    clearTimeout(captionHideTimer);
+    viewerCaption.classList.add("is-visible");
+    viewerCaption.setAttribute("aria-hidden", "false");
+    captionHideTimer = setTimeout(hideViewerCaption, VIEWER_CAPTION_VISIBLE_MS);
+  }
+
   function renderSingleViewerCaption() {
     if (!viewerContext || !singleViewerIsActive()) return;
     const item = viewerContext.items[viewerContext.index];
@@ -200,6 +222,7 @@ function installImageNavigation() {
     if (viewerImage.complete && viewerImage.naturalWidth > 0) {
       queueMicrotask(renderSingleViewerCaption);
     }
+    revealViewerCaption();
   }
 
   function ensurePreviewImage(index, initialOffset) {
@@ -368,6 +391,8 @@ function installImageNavigation() {
     }
   }, true);
 
+  document.addEventListener(VIEWER_CAPTION_REVEAL_EVENT, revealViewerCaption);
+  document.addEventListener(VIEWER_CAPTION_HIDE_EVENT, hideViewerCaption);
   viewerImage.addEventListener("load", renderSingleViewerCaption);
 
   viewerStage.addEventListener("pointerdown", (event) => {
@@ -417,6 +442,7 @@ function installImageNavigation() {
 
     if (!gesture.horizontal) {
       resetSwipeVisuals();
+      revealViewerCaption();
       return;
     }
 
@@ -427,6 +453,7 @@ function installImageNavigation() {
       event.clientY,
     );
     if (direction === 0 || resolveSwipeTarget(direction) === null) {
+      revealViewerCaption();
       snapBack();
       return;
     }
@@ -451,6 +478,7 @@ function installImageNavigation() {
   viewerDialog.addEventListener("close", () => {
     viewerContext = null;
     swipeGesture = null;
+    hideViewerCaption();
     resetSwipeVisuals();
   });
 
