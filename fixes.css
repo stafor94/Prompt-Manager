@@ -590,3 +590,73 @@ main,
     min-height: 96px;
   }
 }
+
+
+/* v1.10.0 editor image ordering and preview */
+.image-attachment-hint {
+  font-size: .75rem;
+  font-weight: 500;
+}
+
+.editor-image-item {
+  cursor: grab;
+  transition: opacity .12s ease, transform .12s ease, box-shadow .12s ease;
+}
+
+.editor-image-item.dragging {
+  opacity: .55;
+  transform: scale(.97);
+}
+
+.editor-image-item.drop-before {
+  box-shadow: inset 4px 0 0 var(--primary);
+}
+
+.editor-image-item.drop-after {
+  box-shadow: inset -4px 0 0 var(--primary);
+}
+
+.editor-image-preview {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  cursor: zoom-in;
+}
+
+.editor-image-drag-handle {
+  position: absolute;
+  left: 4px;
+  bottom: 4px;
+  z-index: 3;
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  min-width: 34px;
+  height: 34px;
+  min-height: 34px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, .68);
+  color: #fff;
+  cursor: grab;
+  font-size: 1.25rem;
+  line-height: 1;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.editor-image-drag-handle:active {
+  cursor: grabbing;
+}
+
+.remove-image-button {
+  z-index: 3;
+}

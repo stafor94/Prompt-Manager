@@ -1,8 +1,15 @@
 import { parseReleaseNotes } from "./release-notes-core.mjs";
 
-const APP_VERSION = "1.9.0";
+const APP_VERSION = "1.10.0";
 const CHANGELOG_URL = `./CHANGELOG.md?v=${APP_VERSION}`;
 const FALLBACK_CHANGELOG = `
+## [1.10.0] - 2026-09-11
+
+### 추가
+
+- 새 프롬프트에서 가장 최근에 선택한 LLM을 기본값으로 사용합니다.
+- 신규·수정 화면에서 이미지를 드래그해 순서를 바꾸고, 이미지를 눌러 확대 상세 보기를 열 수 있습니다.
+
 ## [1.9.0] - 2026-09-10
 
 ### 추가

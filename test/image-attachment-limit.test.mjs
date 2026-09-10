@@ -32,19 +32,21 @@ test("편집기와 백업 검증은 이미지 최대 20장 기준을 사용한�
   ]);
   assert.match(app, /const MAX_IMAGES = 20;/);
   assert.match(backup, /export const MAX_IMAGES = 20;/);
+  const navigation = await read("image-navigation.js");
+  assert.match(navigation, /removedCount < 20/);
   assert.match(index, /id="editorImageCount">0 \/ 20장/);
   assert.match(index, /이미지를 최대 20장까지 첨부할 수 있습니다\./);
 });
 
 test("20장 이미지는 ZIP 백업에서 왕복하고 21장은 거부한다", () => {
   const zip = createBackupZip([promptWithImages(20)], {
-    appVersion: "1.9.0",
+    appVersion: "1.10.0",
     exportedAt: 1,
   });
   const parsed = parseBackupZip(zip);
   assert.equal(parsed.prompts[0].images.length, 20);
   assert.throws(
-    () => createBackupZip([promptWithImages(21)], { appVersion: "1.9.0", exportedAt: 1 }),
+    () => createBackupZip([promptWithImages(21)], { appVersion: "1.10.0", exportedAt: 1 }),
     /이미지는 최대 20장까지 허용됩니다/,
   );
 });

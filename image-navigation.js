@@ -45,6 +45,8 @@ function installImageNavigation() {
   const viewerCaption = document.querySelector("#imageViewerCaption");
   const editorDialog = document.querySelector("#editorDialog");
   const editorImageList = document.querySelector("#editorImageList");
+  const editorTitleInput = document.querySelector("#promptTitleInput");
+  const editorTitle = document.querySelector("#editorTitle");
   const snackbar = document.querySelector("#snackbar");
 
   if (!viewerDialog || !viewerStage || !viewerImage || !viewerCaption) return;
@@ -83,6 +85,21 @@ function installImageNavigation() {
     const buttons = [...document.querySelectorAll("#detailImageStrip [data-detail-image-index]")]
       .filter(isVisible);
     const promptTitle = document.querySelector("#detailTitle")?.textContent?.trim() ?? "";
+    const items = buttons
+      .map((button) => imageItemFromButton(button, promptTitle))
+      .filter(Boolean);
+    const index = buttons.indexOf(clickedButton);
+    if (index < 0 || items.length === 0) return;
+    viewerContext = { items, index };
+  }
+
+  function captureEditorContext(clickedButton) {
+    if (!editorImageList) return;
+    const buttons = [...editorImageList.querySelectorAll("[data-editor-image-index]")]
+      .filter(isVisible);
+    const promptTitle = editorTitleInput?.value?.trim()
+      || editorTitle?.textContent?.trim()
+      || "첨부 이미지";
     const items = buttons
       .map((button) => imageItemFromButton(button, promptTitle))
       .filter(Boolean);
@@ -307,7 +324,7 @@ function installImageNavigation() {
     if (!editorImageList) return;
     let removedCount = 0;
     let removeButton = editorImageList.querySelector("[data-remove-image-id]");
-    while (removeButton && removedCount < 10) {
+    while (removeButton && removedCount < 20) {
       removeButton.click();
       removedCount += 1;
       removeButton = editorImageList.querySelector("[data-remove-image-id]");
@@ -320,6 +337,13 @@ function installImageNavigation() {
   }
 
   document.addEventListener("click", (event) => {
+    const editorButton = event.target.closest?.("#editorImageList [data-editor-image-index]");
+    if (editorButton) {
+      captureEditorContext(editorButton);
+      queueMicrotask(renderSingleViewerCaption);
+      return;
+    }
+
     const detailButton = event.target.closest?.("#detailImageStrip [data-detail-image-index]");
     if (detailButton) {
       captureDetailContext(detailButton);
