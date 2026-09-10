@@ -1,8 +1,15 @@
 import { parseReleaseNotes } from "./release-notes-core.mjs";
 
-const APP_VERSION = "1.8.0";
+const APP_VERSION = "1.9.0";
 const CHANGELOG_URL = `./CHANGELOG.md?v=${APP_VERSION}`;
 const FALLBACK_CHANGELOG = `
+## [1.9.0] - 2026-09-10
+
+### 추가
+
+- 프롬프트 하나에 이미지를 최대 20장까지 첨부할 수 있습니다.
+- 백업 및 복원도 프롬프트당 최대 20장 이미지를 지원합니다.
+
 ## [1.8.0] - 2026-09-09
 
 ### 추가
