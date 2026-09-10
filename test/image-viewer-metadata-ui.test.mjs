@@ -28,7 +28,7 @@ test("기본 이미지 열기 경로도 캡션에 파일명을 넣지 않는다"
   assert.ok(detailViewer, "상세 이미지 열기 함수를 찾을 수 없습니다.");
   assert.ok(archiveViewer, "보관함 이미지 열기 함수를 찾을 수 없습니다.");
   assert.doesNotMatch(detailViewer, /imageViewerCaption\.textContent[^\n]*image\.name/);
-  assert.match(detailViewer, /detailTitle\.textContent\.trim\(\)/);
+  assert.match(detailViewer, /String\(title \|\| "첨부 이미지"\)/);
   assert.doesNotMatch(archiveViewer, /imageViewerCaption\.textContent[^\n]*image\.imageName/);
   assert.match(archiveViewer, /image\.promptTitle/);
 });
@@ -47,5 +47,5 @@ test("2장 뷰어는 좌우 해상도·비율을 하이픈 형식으로 표시�
 test("이미지 메타데이터 모듈은 오프라인 앱 셸에 포함된다", async () => {
   const sw = await read("sw.js");
   assert.match(sw, /\.\/image-metadata\.mjs/);
-  assert.match(sw, /prompt-manager-shell-v54/);
+  assert.match(sw, /prompt-manager-shell-v55/);
 });

@@ -23,11 +23,13 @@ import {
   mergeCustomLlms,
   normalizeCustomLlms,
 } from "./llm-registry.mjs";
+import { moveImageById } from "./editor-image-order.mjs";
 
 const BACKUP_SCHEMA_VERSION = 3;
 const SUPPORTED_BACKUP_SCHEMA_VERSIONS = new Set([1, 2, 3]);
 const TITLE_MAX_LENGTH = 50;
 const MAX_IMAGES = 20;
+const RECENT_EDITOR_LLM_KEY = "prompt-manager-recent-editor-llm";
 
 const state = {
   prompts: [],
@@ -36,6 +38,8 @@ const state = {
   editingPromptId: null,
   editorSnapshot: null,
   editorImages: [],
+  editorDraggedImageId: null,
+  editorPointerDrag: null,
   detailImages: [],
   deferredInstallPrompt: null,
   snackbarTimer: null,
@@ -243,6 +247,24 @@ function cloneImages(images) {
   return normalizeStoredImages(images).map((image) => ({ ...image }));
 }
 
+function getRecentEditorLlm() {
+  try {
+    const llmType = localStorage.getItem(RECENT_EDITOR_LLM_KEY);
+    return isKnownLlmType(llmType, state.customLlms) ? llmType : "CHATGPT";
+  } catch {
+    return "CHATGPT";
+  }
+}
+
+function rememberRecentEditorLlm(llmType) {
+  if (!isKnownLlmType(llmType, state.customLlms)) return;
+  try {
+    localStorage.setItem(RECENT_EDITOR_LLM_KEY, llmType);
+  } catch {
+    // 저장소 접근이 제한된 환경에서는 현재 선택만 사용합니다.
+  }
+}
+
 function getStoredImageCount(prompt) {
   if (Number.isInteger(prompt?.imageCount) && prompt.imageCount >= 0) return prompt.imageCount;
   return Array.isArray(prompt?.images) ? prompt.images.length : 0;
@@ -338,14 +360,35 @@ async function refreshPrompts() {
   await updateStorageSummary();
 }
 
-function createEditorImageItem(image) {
+function createEditorImageItem(image, index) {
   const item = document.createElement("div");
   item.className = "editor-image-item";
   item.dataset.imageId = image.id;
+  item.draggable = true;
+  item.setAttribute("aria-label", `${index + 1}번째 이미지`);
+
+  const previewButton = document.createElement("button");
+  previewButton.type = "button";
+  previewButton.className = "editor-image-preview";
+  previewButton.dataset.editorImageIndex = String(index);
+  previewButton.draggable = true;
+  previewButton.setAttribute("aria-label", `${image.name} 상세 보기`);
+  previewButton.title = "이미지 상세 보기";
   const thumbnail = document.createElement("img");
   thumbnail.src = image.dataUrl;
   thumbnail.alt = image.name;
   thumbnail.loading = "lazy";
+  thumbnail.draggable = false;
+  previewButton.append(thumbnail);
+
+  const dragHandle = document.createElement("button");
+  dragHandle.type = "button";
+  dragHandle.className = "editor-image-drag-handle";
+  dragHandle.dataset.editorDragHandle = image.id;
+  dragHandle.setAttribute("aria-label", `${image.name} 순서 변경`);
+  dragHandle.title = "드래그하여 순서 변경";
+  dragHandle.textContent = "⠿";
+
   const removeButton = document.createElement("button");
   removeButton.type = "button";
   removeButton.className = "remove-image-button";
@@ -353,7 +396,7 @@ function createEditorImageItem(image) {
   removeButton.setAttribute("aria-label", `${image.name} 제거`);
   removeButton.title = "이미지 제거";
   removeButton.textContent = "×";
-  item.append(thumbnail, removeButton);
+  item.append(previewButton, dragHandle, removeButton);
   return item;
 }
 
@@ -361,7 +404,80 @@ function renderEditorImages() {
   elements.editorImageCount.textContent = `${state.editorImages.length} / ${MAX_IMAGES}장`;
   elements.editorImageEmpty.classList.toggle("hidden", state.editorImages.length > 0);
   elements.addPromptImagesButton.disabled = state.editorImages.length >= MAX_IMAGES;
-  elements.editorImageList.replaceChildren(...state.editorImages.map(createEditorImageItem));
+  elements.editorImageList.replaceChildren(
+    ...state.editorImages.map((image, index) => createEditorImageItem(image, index)),
+  );
+}
+
+function clearEditorDropIndicators() {
+  elements.editorImageList.querySelectorAll(".drop-before, .drop-after").forEach((item) => {
+    item.classList.remove("drop-before", "drop-after");
+  });
+}
+
+function clearEditorDragState() {
+  clearEditorDropIndicators();
+  elements.editorImageList.querySelectorAll(".dragging").forEach((item) => item.classList.remove("dragging"));
+  state.editorDraggedImageId = null;
+  state.editorPointerDrag = null;
+}
+
+function getEditorDropPlacement(item, clientX) {
+  const rect = item.getBoundingClientRect();
+  return clientX >= rect.left + (rect.width / 2) ? "after" : "before";
+}
+
+function markEditorDropTarget(item, placement) {
+  clearEditorDropIndicators();
+  item.classList.add(placement === "after" ? "drop-after" : "drop-before");
+}
+
+function reorderEditorImage(sourceId, targetId, placement = "before") {
+  const reordered = moveImageById(state.editorImages, sourceId, targetId, placement);
+  if (reordered === state.editorImages) return false;
+  state.editorImages = reordered;
+  renderEditorImages();
+  return true;
+}
+
+function beginEditorPointerDrag(event) {
+  if (event.pointerType === "mouse" || !event.isPrimary || event.button !== 0) return;
+  const handle = event.target.closest("[data-editor-drag-handle]");
+  const item = handle?.closest(".editor-image-item");
+  if (!handle || !item) return;
+  event.preventDefault();
+  handle.setPointerCapture?.(event.pointerId);
+  state.editorPointerDrag = {
+    pointerId: event.pointerId,
+    sourceId: item.dataset.imageId,
+    targetId: null,
+    placement: "before",
+  };
+  item.classList.add("dragging");
+}
+
+function updateEditorPointerDrag(event) {
+  const drag = state.editorPointerDrag;
+  if (!drag || drag.pointerId !== event.pointerId) return;
+  event.preventDefault();
+  const hit = document.elementFromPoint(event.clientX, event.clientY);
+  const target = hit?.closest?.(".editor-image-item");
+  if (!target || !elements.editorImageList.contains(target) || target.dataset.imageId === drag.sourceId) {
+    drag.targetId = null;
+    clearEditorDropIndicators();
+    return;
+  }
+  drag.targetId = target.dataset.imageId;
+  drag.placement = getEditorDropPlacement(target, event.clientX);
+  markEditorDropTarget(target, drag.placement);
+}
+
+function finishEditorPointerDrag(event, commit = true) {
+  const drag = state.editorPointerDrag;
+  if (!drag || drag.pointerId !== event.pointerId) return;
+  event.preventDefault();
+  if (commit && drag.targetId) reorderEditorImage(drag.sourceId, drag.targetId, drag.placement);
+  clearEditorDragState();
 }
 
 function openEditor(prompt = null, options = {}) {
@@ -370,7 +486,7 @@ function openEditor(prompt = null, options = {}) {
   elements.editorTitle.textContent = asDuplicate
     ? "프롬프트 복제"
     : (prompt ? "프롬프트 수정" : "새 프롬프트");
-  elements.promptLlm.value = prompt?.llmType ?? "CHATGPT";
+  elements.promptLlm.value = prompt?.llmType ?? getRecentEditorLlm();
   elements.promptTitleInput.value = prompt?.title ?? "";
   elements.promptContentInput.value = prompt?.content ?? "";
   elements.promptFavoriteInput.checked = asDuplicate ? false : (prompt?.isFavorite ?? false);
@@ -470,6 +586,7 @@ async function submitPrompt(event) {
     isFavorite: elements.promptFavoriteInput.checked,
   };
   await putPrompt(prompt);
+  rememberRecentEditorLlm(llmType);
   state.editorSnapshot = currentEditorValue();
   elements.editorDialog.close();
   await refreshPrompts();
@@ -544,12 +661,14 @@ function clampScale(scale) {
   return Math.min(5, Math.max(1, scale));
 }
 
-function openImageViewer(index) {
-  const image = state.detailImages[index];
+function openImageViewer(images, index, title) {
+  const sourceImages = Array.isArray(images) ? images : [];
+  const image = sourceImages[index];
   if (!image) return;
   elements.imageViewerImage.src = image.dataUrl;
   elements.imageViewerImage.alt = image.name;
-  elements.imageViewerCaption.textContent = `${index + 1} / ${state.detailImages.length} · ${elements.detailTitle.textContent.trim()}`;
+  const captionTitle = String(title || "첨부 이미지").trim() || "첨부 이미지";
+  elements.imageViewerCaption.textContent = `${index + 1} / ${sourceImages.length} · ${captionTitle}`;
   resetViewerTransform();
   elements.imageViewerDialog.showModal();
   history.pushState({ ...(history.state ?? {}), promptManagerImageViewer: true }, "", location.href);
@@ -802,6 +921,7 @@ function bindEvents() {
     if (card) openDetail(card.dataset.promptId).catch(handleError);
   });
   elements.promptTitleInput.addEventListener("input", updateTitleCount);
+  elements.promptLlm.addEventListener("change", () => rememberRecentEditorLlm(elements.promptLlm.value));
   elements.promptForm.addEventListener("submit", (event) => submitPrompt(event).catch(handleError));
   elements.closeEditorButton.addEventListener("click", tryCloseEditor);
   elements.cancelEditorButton.addEventListener("click", tryCloseEditor);
@@ -824,16 +944,62 @@ function bindEvents() {
     if (files.length) await addSelectedImages(files).catch(handleError);
   });
   elements.editorImageList.addEventListener("click", (event) => {
-    const button = event.target.closest("[data-remove-image-id]");
-    if (!button) return;
-    state.editorImages = state.editorImages.filter((image) => image.id !== button.dataset.removeImageId);
-    renderEditorImages();
-    showSnackbar("이미지를 제거했습니다.");
+    const removeButton = event.target.closest("[data-remove-image-id]");
+    if (removeButton) {
+      state.editorImages = state.editorImages.filter((image) => image.id !== removeButton.dataset.removeImageId);
+      renderEditorImages();
+      showSnackbar("이미지를 제거했습니다.");
+      return;
+    }
+    const previewButton = event.target.closest("[data-editor-image-index]");
+    if (previewButton) {
+      const title = elements.promptTitleInput.value.trim() || elements.editorTitle.textContent.trim();
+      openImageViewer(state.editorImages, Number(previewButton.dataset.editorImageIndex), title);
+    }
   });
+  elements.editorImageList.addEventListener("dragstart", (event) => {
+    const item = event.target.closest(".editor-image-item");
+    if (!item || event.target.closest("[data-remove-image-id]")) {
+      event.preventDefault();
+      return;
+    }
+    state.editorDraggedImageId = item.dataset.imageId;
+    item.classList.add("dragging");
+    if (event.dataTransfer) {
+      event.dataTransfer.effectAllowed = "move";
+      event.dataTransfer.setData("text/plain", state.editorDraggedImageId);
+    }
+  });
+  elements.editorImageList.addEventListener("dragover", (event) => {
+    if (!state.editorDraggedImageId) return;
+    const target = event.target.closest(".editor-image-item");
+    if (!target || target.dataset.imageId === state.editorDraggedImageId) return;
+    event.preventDefault();
+    if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
+    markEditorDropTarget(target, getEditorDropPlacement(target, event.clientX));
+  });
+  elements.editorImageList.addEventListener("drop", (event) => {
+    if (!state.editorDraggedImageId) return;
+    const target = event.target.closest(".editor-image-item");
+    event.preventDefault();
+    if (target && target.dataset.imageId !== state.editorDraggedImageId) {
+      reorderEditorImage(
+        state.editorDraggedImageId,
+        target.dataset.imageId,
+        getEditorDropPlacement(target, event.clientX),
+      );
+    }
+    clearEditorDragState();
+  });
+  elements.editorImageList.addEventListener("dragend", clearEditorDragState);
+  elements.editorImageList.addEventListener("pointerdown", beginEditorPointerDrag);
+  elements.editorImageList.addEventListener("pointermove", updateEditorPointerDrag);
+  elements.editorImageList.addEventListener("pointerup", (event) => finishEditorPointerDrag(event, true));
+  elements.editorImageList.addEventListener("pointercancel", (event) => finishEditorPointerDrag(event, false));
   elements.closeDetailButton.addEventListener("click", () => elements.detailDialog.close());
   elements.detailImageStrip.addEventListener("click", (event) => {
     const button = event.target.closest("[data-detail-image-index]");
-    if (button) openImageViewer(Number(button.dataset.detailImageIndex));
+    if (button) openImageViewer(state.detailImages, Number(button.dataset.detailImageIndex), elements.detailTitle.textContent.trim());
   });
   elements.copyPromptButton.addEventListener("click", async () => {
     const prompt = await getPrompt(state.activePromptId);
