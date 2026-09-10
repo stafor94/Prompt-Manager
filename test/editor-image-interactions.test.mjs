@@ -44,11 +44,19 @@ test("편집기 이미지는 드래그 재정렬과 터치 핸들을 지원한�
   assert.match(css, /touch-action: none/);
 });
 
-test("편집기 이미지 클릭은 공용 상세 이미지 뷰어를 연다", async () => {
-  const [app, index] = await Promise.all([read("app.js"), read("index.html")]);
+test("편집기 이미지 클릭은 공용 상세 이미지 뷰어와 탐색 컨텍스트를 연다", async () => {
+  const [app, index, navigation] = await Promise.all([
+    read("app.js"),
+    read("index.html"),
+    read("image-navigation.js"),
+  ]);
   assert.match(app, /dataset\.editorImageIndex/);
   assert.match(app, /openImageViewer\(state\.editorImages, Number\(previewButton\.dataset\.editorImageIndex\), title\)/);
   assert.match(app, /function openImageViewer\(images, index, title\)/);
+  assert.match(navigation, /function captureEditorContext\(clickedButton\)/);
+  assert.match(navigation, /#editorImageList \[data-editor-image-index\]/);
+  assert.match(navigation, /editorTitleInput\?\.value\?\.trim\(\)/);
+  assert.match(navigation, /queueMicrotask\(renderSingleViewerCaption\)/);
   assert.match(index, /드래그로 순서 변경 · 눌러 상세 보기/);
 });
 

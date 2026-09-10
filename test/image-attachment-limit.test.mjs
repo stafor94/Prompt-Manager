@@ -32,6 +32,8 @@ test("편집기와 백업 검증은 이미지 최대 20장 기준을 사용한�
   ]);
   assert.match(app, /const MAX_IMAGES = 20;/);
   assert.match(backup, /export const MAX_IMAGES = 20;/);
+  const navigation = await read("image-navigation.js");
+  assert.match(navigation, /removedCount < 20/);
   assert.match(index, /id="editorImageCount">0 \/ 20장/);
   assert.match(index, /이미지를 최대 20장까지 첨부할 수 있습니다\./);
 });
